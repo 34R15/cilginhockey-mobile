@@ -159,6 +159,25 @@ function resolvePaddle(puck, paddle) {
     return true;
 }
 
+// Push two paddles apart when they overlap. Neither paddle acquires velocity from
+// this — they simply can't occupy the same space.
+function resolvePaddles(pa, pb) {
+    const dx   = pb.x - pa.x;
+    const dy   = pb.y - pa.y;
+    const dist = Math.hypot(dx, dy);
+    const min  = PADDLE_R * 2;
+    if (dist >= min || dist < 0.0001) return;
+
+    // Overlap amount split evenly between both paddles
+    const overlap = (min - dist) / 2;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    pa.x -= nx * overlap;
+    pa.y -= ny * overlap;
+    pb.x += nx * overlap;
+    pb.y += ny * overlap;
+}
+
 // Drive the AI paddle (always player 2 / top). Called once per tick before stepRoom,
 // so the movement it makes this tick becomes its paddle velocity for hit impulses.
 function updateBot(room) {
@@ -223,7 +242,10 @@ function stepRoom(room) {
     puck.x += puck.vx;
     puck.y += puck.vy;
 
-    // Paddle collisions (server is the only authority — no client conflict).
+    // Paddle–paddle collision: push them apart so they can't overlap.
+    resolvePaddles(p.p1, p.p2);
+
+    // Paddle–puck collisions (server is the only authority — no client conflict).
     // Emit 'hit' only on a rising edge (new contact), not every overlapping tick.
     const c1 = resolvePaddle(puck, p.p1);
     const c2 = resolvePaddle(puck, p.p2);
