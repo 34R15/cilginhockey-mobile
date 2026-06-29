@@ -1117,6 +1117,26 @@ document.addEventListener('DOMContentLoaded', () => {
         openSettingsPopup();
     }
 
+    // Segmented (pill) control helpers — replace the old <select> dropdowns.
+    // Each .segment holds .seg-option buttons; exactly one is .active at a time.
+    function getSegValue(segmentId, fallback) {
+        const seg = document.getElementById(segmentId);
+        if (!seg) return fallback;
+        const active = seg.querySelector('.seg-option.active');
+        return active ? active.dataset.value : fallback;
+    }
+    function initSegments() {
+        document.querySelectorAll('.segment').forEach((seg) => {
+            seg.addEventListener('click', (e) => {
+                const opt = e.target.closest('.seg-option');
+                if (!opt || !seg.contains(opt)) return;
+                seg.querySelectorAll('.seg-option').forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+            });
+        });
+    }
+    initSegments();
+
     // Show the settings popup; difficulty selector is only visible in bot mode
     function openSettingsPopup() {
         const popup = document.getElementById('scoreLimitPopup');
@@ -1131,14 +1151,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Skor limit seçimini onayla ve oda oluştur
     function confirmScoreAndCreateRoom() {
         const popup = document.getElementById('scoreLimitPopup');
-        const scoreLimitSelect = document.getElementById('scoreLimitSelect');
-        const courtTypeSelect = document.getElementById('courtTypeSelect');
-        const selectedScoreLimit = parseInt(scoreLimitSelect.value);
-        const selectedCourtType = courtTypeSelect.value;
-        
+        const selectedScoreLimit = parseInt(getSegValue('scoreSegment', '5'), 10);
+        const selectedCourtType = getSegValue('courtSegment', 'full');
+
         console.log('Seçilen skor limiti:', selectedScoreLimit);
         console.log('Seçilen saha tipi:', selectedCourtType);
-        
+
         // Popup'ı gizle
         popup.style.display = 'none';
 
@@ -1154,8 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pendingBotMode) {
             // Tek oyuncu: bot odası iste
-            const difficultySelect = document.getElementById('difficultySelect');
-            const difficulty = difficultySelect ? difficultySelect.value : 'medium';
+            const difficulty = getSegValue('difficultySegment', 'medium');
             console.log('Creating BOT room, difficulty:', difficulty);
             setTimeout(() => {
                 socket.emit('createBotRoom', {

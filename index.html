@@ -4,7 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Air Hockey Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Surfaces */
+            --bg-deep: #0a0a1f;
+            --bg-deep-2: #12122e;
+            --glass: rgba(255, 255, 255, 0.06);
+            --glass-strong: rgba(255, 255, 255, 0.10);
+            --stroke: rgba(255, 255, 255, 0.14);
+            --stroke-soft: rgba(255, 255, 255, 0.08);
+            /* Neon accents */
+            --neon-purple: #7c3aed;
+            --neon-violet: #a78bfa;
+            --neon-rose: #f43f5e;
+            --neon-cyan: #22d3ee;
+            --neon-green: #39ff14;
+            /* Text */
+            --text: #eef1f8;
+            --text-muted: #9aa3bd;
+            /* Motion */
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+
         html, body {
             margin: 0;
             padding: 0;
@@ -25,7 +52,13 @@
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            background: #1a1a1a;
+            font-family: 'Montserrat', -apple-system, 'Segoe UI', Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(120% 80% at 15% 0%, rgba(124, 58, 237, 0.28) 0%, transparent 55%),
+                radial-gradient(120% 80% at 85% 100%, rgba(244, 63, 94, 0.22) 0%, transparent 55%),
+                radial-gradient(100% 60% at 50% 50%, rgba(34, 211, 238, 0.10) 0%, transparent 60%),
+                linear-gradient(160deg, var(--bg-deep) 0%, var(--bg-deep-2) 100%);
         }
         
         @media (orientation: landscape) {
@@ -48,211 +81,207 @@
 
         #nameForm {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background-color: #FF7043;
-            background-image: url('assets/images/cilginhokey.png');
-            background-size: cover;
-            background-position: center;
             z-index: 1000;
-            padding: 0;
-            margin: 0;
-            border-radius: 0;
-            min-height: 100vh;
-            box-shadow: none;
+            padding: 24px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        /* Atmospheric hero image, darkened so the glass card pops */
+        #nameForm::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(10,10,31,0.55) 0%, rgba(10,10,31,0.88) 100%),
+                url('assets/images/cilginhokey.png') center/cover no-repeat;
+            opacity: 0.9;
+            z-index: -1;
         }
 
         #nameForm .form-content {
-            width: 95vw;
-            max-width: 500px;
+            width: 100%;
+            max-width: 380px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            align-items: stretch;
+            gap: 18px;
+            padding: 34px 26px 30px;
+            border-radius: 28px;
+            background: var(--glass);
+            border: 1px solid var(--stroke);
+            backdrop-filter: blur(22px) saturate(140%);
+            -webkit-backdrop-filter: blur(22px) saturate(140%);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10);
+            animation: cardRise 0.6s var(--ease-out) both;
         }
 
         #nameForm h2 {
-            color: white;
-            font-size: 38px;
-            margin: 0 0 10px 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 30px;
+            letter-spacing: 1px;
+            margin: 0 0 4px;
+            text-align: center;
+            background: linear-gradient(90deg, var(--neon-violet), var(--neon-cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 18px rgba(124,58,237,0.45));
         }
 
-        #nameForm input {
-            padding: 25px 20px;
-            margin: 10px auto 15px auto;
-            font-size: 26px;
-            border-radius: 20px;
-            border: none;
-            width: 85%;
-            max-width: 380px;
-            box-sizing: border-box;
-            outline: none;
-            background: rgba(255, 255, 255, 0.95);
-            color: #000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: box-shadow 0.2s;
-        }
-
-        #nameForm input:focus {
-            box-shadow: 0 0 0 2px #4CAF50;
-        }
-
-        #nameForm button {
-            padding: 25px 0;
-            margin: 0 auto;
-            font-size: 28px;
-            border-radius: 20px;
-            width: 85%;
-            max-width: 380px;
-            border: none;
-            background: linear-gradient(90deg, #103592 0%, #4569b7 50%, #2C5364 100%);
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            transition: background 0.2s, box-shadow 0.2s;
-        }
-
-        #nameForm button:active {
-            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
-            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-        }
-
-        /* Score Limit Select Styling */
-        .score-limit-container {
-            margin: 16px 0 20px 0;
-            width: 90vw;
-            max-width: 320px;
-        }
-        
-        .score-limit-container label {
-            display: block;
-            margin-bottom: 12px;
-            color: white;
-            font-size: 20px;
-            text-align: left;
-            font-weight: 500;
-        }
-        
-        .score-limit-container select {
+        .field-input {
             width: 100%;
-            padding: 18px 16px;
-            font-size: 22px;
-            border-radius: 12px;
-            border: none;
-            background: #222;
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            transition: box-shadow 0.2s;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            cursor: pointer;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px top 50%;
-            background-size: 12px auto;
-            padding-right: 40px;
-        }
-        
-        .score-limit-container select:focus {
-            box-shadow: 0 0 0 2px #4CAF50;
+            box-sizing: border-box;
+            padding: 18px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: inherit;
+            border-radius: 16px;
+            border: 1px solid var(--stroke);
             outline: none;
+            background: rgba(0,0,0,0.30);
+            color: var(--text);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
-        
-        .score-limit-container select option {
-            padding: 16px;
-            background: #222;
-            color: #fff;
-            font-size: 20px;
+        .field-input::placeholder { color: var(--text-muted); font-weight: 500; }
+        .field-input:focus {
+            border-color: var(--neon-violet);
+            background: rgba(0,0,0,0.40);
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.30), 0 0 22px rgba(124,58,237,0.25);
         }
 
+        /* ── Glass menu panel ─────────────────────────────────────────────── */
         #menu {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 100px 30px 90px 30px;
-            border-radius: 45px;
+            width: min(92vw, 400px);
+            max-height: 92vh;
+            overflow-y: auto;
+            padding: 30px 24px;
+            border-radius: 30px;
             text-align: center;
-            color: white;
             z-index: 100;
             display: none;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-            background-color: #FF7043;
-            min-height: 600px;
-            width: 95vw;
-            max-width: 500px;
-            display: flex;
             flex-direction: column;
             justify-content: center;
+            background: var(--glass);
+            border: 1px solid var(--stroke);
+            backdrop-filter: blur(24px) saturate(140%);
+            -webkit-backdrop-filter: blur(24px) saturate(140%);
+            box-shadow: 0 26px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.10);
+            animation: cardRise 0.5s var(--ease-out) both;
         }
 
         #mainMenu {
             width: 100%;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 20px;
+            align-items: stretch;
+            gap: 14px;
         }
-
-        #menu input {
-            padding: 25px 20px;
-            margin: 10px auto;
+        #mainMenu .brand {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
             font-size: 26px;
-            border-radius: 20px;
-            border: none;
-            width: 85%;
-            max-width: 380px;
-            box-sizing: border-box;
-            outline: none;
-            background: rgba(34, 34, 34, 0.95);
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: box-shadow 0.2s;
+            letter-spacing: 1px;
+            margin: 2px 0 12px;
+            background: linear-gradient(90deg, var(--neon-violet), var(--neon-cyan));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 16px rgba(124,58,237,0.4));
         }
 
-        #menu button {
-            padding: 25px 0;
-            margin: 10px auto;
-            font-size: 28px;
-            border-radius: 20px;
-            width: 85%;
-            max-width: 380px;
-            border: none;
-            background: linear-gradient(90deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: background 0.2s, box-shadow 0.2s;
-        }
-
-        #menu button:active {
-            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-
-        .join-room {
+        /* ── Unified button system ────────────────────────────────────────── */
+        .btn {
+            position: relative;
             width: 100%;
+            box-sizing: border-box;
+            padding: 17px 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: var(--text);
+            border: 1px solid var(--stroke);
+            border-radius: 16px;
+            background: var(--glass-strong);
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.12s var(--ease-spring), box-shadow 0.2s, border-color 0.2s, background 0.2s;
+            -webkit-user-select: none; user-select: none;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.5; cursor: default; }
+
+        /* Primary call-to-action — glowing gradient (Hızlı Oyna, settings confirm, name submit) */
+        .btn-cta {
+            border: none;
+            color: #fff;
+            background: linear-gradient(135deg, var(--neon-rose) 0%, var(--neon-purple) 100%);
+            box-shadow: 0 10px 26px rgba(124,58,237,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset;
+        }
+        .btn-cta::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent 55%);
+            opacity: 0.6;
+        }
+        .btn-cta:active { box-shadow: 0 4px 14px rgba(124,58,237,0.4); }
+
+        /* Accent variants — colored glass with a left neon edge */
+        .btn-accent { border-color: var(--stroke); }
+        .btn-purple { box-shadow: inset 4px 0 0 var(--neon-purple), 0 6px 18px rgba(0,0,0,0.3); }
+        .btn-cyan   { box-shadow: inset 4px 0 0 var(--neon-cyan),   0 6px 18px rgba(0,0,0,0.3); }
+        .btn-purple:active, .btn-cyan:active { background: rgba(255,255,255,0.16); }
+
+        /* Ghost — subtle, for low-priority actions (Geri Dön) */
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--stroke-soft);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .btn-ghost:active { background: rgba(255,255,255,0.06); }
+
+        .btn-icon { margin-right: 9px; vertical-align: -3px; }
+
+        /* Join-room group: input + button stacked in a sub-card */
+        .join-room {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 20px;
+            gap: 10px;
+            padding: 14px;
+            border-radius: 18px;
+            background: rgba(0,0,0,0.22);
+            border: 1px solid var(--stroke-soft);
+        }
+        .menu-divider {
+            display: flex; align-items: center; gap: 12px;
+            color: var(--text-muted); font-size: 12px; font-weight: 600;
+            letter-spacing: 1.5px; text-transform: uppercase;
+            margin: 4px 0;
+        }
+        .menu-divider::before, .menu-divider::after {
+            content: ''; flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--stroke), transparent);
         }
 
-        input {
-            padding: 8px;
-            margin: 5px;
-            border-radius: 5px;
-            border: 1px solid #333;
+        @keyframes cardRise {
+            from { opacity: 0; transform: translate(-50%, calc(-50% + 26px)); }
+            to   { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        /* nameForm card isn't centered via transform, so it uses a plain rise */
+        #nameForm .form-content { animation: cardRiseFlat 0.6s var(--ease-out) both; }
+        @keyframes cardRiseFlat {
+            from { opacity: 0; transform: translateY(26px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         canvas {
@@ -267,49 +296,48 @@
         #waitingRoom {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
             justify-content: center;
-            min-height: 60vh;
+            gap: 14px;
         }
         .room-id-box {
-            background: rgba(0, 0, 0, 0.9);
-            border: 2.5px solid #39ff14;
-            border-radius: 16px;
-            padding: 18px 32px;
-            margin: 18px 0 18px 0;
-            font-size: 2.2rem;
-            font-family: 'Roboto Mono', 'Consolas', monospace;
-            color: #39ff14;
-            letter-spacing: 2px;
-            font-weight: bold;
-            box-shadow: 0 2px 12px rgba(57,255,20,0.08);
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(34, 211, 238, 0.5);
+            border-radius: 18px;
+            padding: 20px 24px;
+            margin: 4px 0;
+            font-size: 2.6rem;
+            font-family: 'Orbitron', monospace;
+            color: var(--neon-cyan);
+            letter-spacing: 6px;
+            font-weight: 700;
+            text-shadow: 0 0 18px rgba(34,211,238,0.6);
+            box-shadow: 0 0 30px rgba(34,211,238,0.18), inset 0 0 24px rgba(34,211,238,0.08);
             user-select: all;
             text-align: center;
+            animation: codePulse 2.4s ease-in-out infinite;
         }
+        @keyframes codePulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(34,211,238,0.18), inset 0 0 24px rgba(34,211,238,0.08); }
+            50%      { box-shadow: 0 0 44px rgba(34,211,238,0.34), inset 0 0 30px rgba(34,211,238,0.14); }
+        }
+        .copy-row { display: flex; gap: 10px; }
         .copy-btn {
-            margin-top: 8px;
-            background: #222;
-            color: #0066ff;
-            border: 1.5px solid #0066ff;
-            border-radius: 8px;
-            padding: 8px 18px;
-            font-size: 1.1rem;
-            font-family: 'Roboto Mono', monospace;
+            flex: 1;
+            background: var(--glass-strong);
+            color: var(--text);
+            border: 1px solid var(--stroke);
+            border-radius: 14px;
+            padding: 13px 14px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            font-family: 'Montserrat', sans-serif;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s;
+            transition: transform 0.12s var(--ease-spring), background 0.2s, border-color 0.2s;
         }
-        .copy-btn:active {
-            color: #fff;
-        }
-        .share-btn {
-            color: #25d366;
-            border-color: #25d366;
-            margin-left: 8px;
-        }
-        .share-btn:active {
-            background: #25d366;
-            color: #fff;
-        }
+        .copy-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.16); }
+        .share-btn { box-shadow: inset 4px 0 0 #25d366; }
+        .copy-btn.copy-code { box-shadow: inset 4px 0 0 var(--neon-cyan); }
         .waiting-dots::after {
             content: '';
             animation: dots 1.4s steps(4, end) infinite;
@@ -321,21 +349,24 @@
             75%  { content: '...'; }
         }
         .waiting-desc {
-            color: #fff;
-            font-size: 1.15rem;
-            margin: 8px 0 0 0;
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin: 4px 0 0;
             text-align: center;
-            font-family: 'Montserrat', 'Arial', sans-serif;
-            opacity: 0.85;
+            line-height: 1.5;
         }
         .waiting-title {
-            color: #fff;
-            font-size: 2.1rem;
-            font-family: 'Montserrat', 'Arial', sans-serif;
-            font-weight: bold;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 8px #000;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--text);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+        .waiting-label {
+            color: var(--text-muted); font-size: 0.78rem; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase; text-align: center;
         }
 
         #startCountdown {
@@ -374,95 +405,94 @@
             100% { transform: scale(1);    opacity: 1; letter-spacing: 4px; }
         }
 
-        /* Score Selection Popup Styling */
+        /* ── Settings popup (Oyun Ayarları) ───────────────────────────────── */
         #scoreLimitPopup {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             z-index: 2000;
             align-items: center;
             justify-content: center;
-            background-image: url('assets/images/cilginhokey.png');
-            background-size: cover;
-            background-position: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: rgba(8, 8, 22, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            animation: fadeIn 0.3s ease both;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .popup-content {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 32px 20px 28px 20px;
-            border-radius: 18px;
-            width: 90vw;
-            max-width: 320px;
+            width: 100%;
+            max-width: 380px;
+            box-sizing: border-box;
+            padding: 28px 24px 24px;
+            border-radius: 28px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            background: var(--glass);
+            border: 1px solid var(--stroke);
+            backdrop-filter: blur(24px) saturate(140%);
+            -webkit-backdrop-filter: blur(24px) saturate(140%);
+            box-shadow: 0 26px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.10);
+            animation: cardRiseFlat 0.45s var(--ease-out) both;
         }
 
         .popup-content h2 {
-            color: white;
-            font-size: 24px;
-            margin: 0 0 20px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+            margin: 0 0 22px;
+            background: linear-gradient(90deg, var(--neon-violet), var(--neon-cyan));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .popup-content select {
-            width: 100%;
-            padding: 18px 16px;
-            font-size: 22px;
-            border-radius: 12px;
+        /* Segmented pill controls */
+        .setting-group { margin-bottom: 18px; text-align: left; }
+        .setting-group > .seg-label {
+            display: block; margin-bottom: 9px;
+            color: var(--text-muted); font-size: 12px; font-weight: 700;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .segment {
+            display: flex;
+            gap: 6px;
+            padding: 5px;
+            border-radius: 16px;
+            background: rgba(0,0,0,0.28);
+            border: 1px solid var(--stroke-soft);
+        }
+        .segment.wrap { flex-wrap: wrap; }
+        .seg-option {
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 13px 6px;
             border: none;
-            background: #222;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color 0.2s, transform 0.12s var(--ease-spring), box-shadow 0.25s;
+        }
+        .segment.wrap .seg-option { flex-basis: calc(50% - 3px); }
+        .seg-option:active { transform: scale(0.94); }
+        .seg-option.active {
             color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            transition: box-shadow 0.2s;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            cursor: pointer;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px top 50%;
-            background-size: 12px auto;
-            padding-right: 40px;
-            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-rose));
+            box-shadow: 0 6px 18px rgba(124,58,237,0.45);
         }
+        .seg-option .seg-sub {
+            display: block; font-size: 10.5px; font-weight: 500;
+            opacity: 0.7; margin-top: 2px; letter-spacing: 0.2px;
+        }
+        .popup-content .btn-cta { margin-top: 8px; }
 
-        .popup-content select:focus {
-            box-shadow: 0 0 0 2px #4CAF50;
-            outline: none;
-        }
-
-        .popup-content button {
-            padding: 18px 0;
-            font-size: 22px;
-            border-radius: 12px;
-            border: none;
-            background: linear-gradient(90deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
-            color: white;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            transition: background 0.2s, box-shadow 0.2s;
-        }
-
-        .popup-content button:active {
-            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
-            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-        }
-
-        #rotateMessage {
-            display: none;
-        }
-
-        #nameForm button, #menu button, .popup-content button, .copy-btn:active {
-            background: radial-gradient(circle at center, #0066ff 0%, #001e68 100%);
-        }
-
-        #nameForm button:active, #menu button:active, .popup-content button:active {
-            background: radial-gradient(circle at center, #004acc 0%, #001855 100%);
-        }
+        #rotateMessage { display: none; }
 
         /* Toast Bildirimi Stilleri */
         .toast-notification {
@@ -537,32 +567,40 @@
 
     <div id="nameForm">
         <div class="form-content">
-            <h2>İsminizi Girin</h2>
-            <input type="text" id="playerNameInput" placeholder="İsminiz" maxlength="10">
-            <button id="submitNameBtn">Başla!</button>
+            <h2>ÇILGIN HOKEY</h2>
+            <input type="text" id="playerNameInput" class="field-input" placeholder="İsminiz" maxlength="10">
+            <button id="submitNameBtn" class="btn btn-cta">Başla</button>
         </div>
     </div>
 
     <div id="menu" style="display: none;">
         <div id="mainMenu">
-            <button id="quickPlayBtn" class="menu-button" style="background: linear-gradient(90deg, #f7971e 0%, #ffd200 100%);">Hızlı Oyna</button>
-            <button id="botPlayBtn" class="menu-button" style="background: linear-gradient(90deg, #8E2DE2 0%, #4A00E0 100%);">Tek Oyuncu (Bot)</button>
-            <button id="createRoomBtn" class="menu-button">Oda Oluştur</button>
-            <div class="input-group">
-                <input type="number" inputmode="numeric" pattern="[0-9]*" id="roomId" placeholder="Oda Kodunu Girin" class="menu-input">
-                <button id="joinRoomBtn" class="menu-button">Odaya Katıl</button>
+            <div class="brand">ÇILGIN HOKEY</div>
+            <button id="quickPlayBtn" class="btn btn-cta">
+                <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Hızlı Oyna
+            </button>
+            <button id="botPlayBtn" class="btn btn-accent btn-purple">
+                <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>Tek Oyuncu
+            </button>
+            <button id="createRoomBtn" class="btn btn-accent btn-cyan">
+                <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Oda Oluştur
+            </button>
+            <div class="menu-divider">veya</div>
+            <div class="join-room">
+                <input type="number" inputmode="numeric" pattern="[0-9]*" id="roomId" placeholder="Oda Kodu" class="field-input" style="text-align:center;letter-spacing:4px;">
+                <button id="joinRoomBtn" class="btn btn-accent">Odaya Katıl</button>
             </div>
-            <button id="backToNameBtn" class="menu-button" style="background: linear-gradient(90deg, #FF416C 0%, #FF4B2B 100%);">Geri Dön</button>
+            <button id="backToNameBtn" class="btn btn-ghost">Geri Dön</button>
         </div>
         <div id="waitingRoom" style="display: none;">
-            <div class="waiting-title">Oda Oluşturuldu!</div>
+            <div class="waiting-title">Oda Hazır</div>
+            <div class="waiting-label">Oda Kodu</div>
             <div class="room-id-box" id="currentRoomId"></div>
-            <div style="display:flex;gap:0;justify-content:center;flex-wrap:wrap;">
-                <button class="copy-btn" id="copyRoomBtn">Kodu Kopyala</button>
+            <div class="copy-row">
+                <button class="copy-btn copy-code" id="copyRoomBtn">Kopyala</button>
                 <button class="copy-btn share-btn" id="shareRoomBtn">Paylaş</button>
             </div>
-            <div class="waiting-desc">Bu kodu rakibinle paylaş ve<br>rakibin katılmasını bekle</div>
-            <div class="waiting-desc waiting-dots" style="margin-top:12px;font-size:1.3rem;letter-spacing:2px;opacity:0.7;">Rakip bekleniyor</div>
+            <div class="waiting-desc waiting-dots">Rakip bekleniyor</div>
         </div>
     </div>
 
@@ -571,30 +609,30 @@
         <div class="popup-content">
             <h2>Oyun Ayarları</h2>
             <div class="setting-group">
-                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Kazanma Skoru</label>
-                <select id="scoreLimitSelect">
-                    <option value="3">3 Gol — Hızlı Maç</option>
-                    <option value="5" selected>5 Gol — Normal</option>
-                    <option value="7">7 Gol — Uzun Maç</option>
-                    <option value="10">10 Gol — Maraton</option>
-                </select>
+                <span class="seg-label">Kazanma Skoru</span>
+                <div class="segment wrap" id="scoreSegment">
+                    <button type="button" class="seg-option" data-value="3">3<span class="seg-sub">Hızlı</span></button>
+                    <button type="button" class="seg-option active" data-value="5">5<span class="seg-sub">Normal</span></button>
+                    <button type="button" class="seg-option" data-value="7">7<span class="seg-sub">Uzun</span></button>
+                    <button type="button" class="seg-option" data-value="10">10<span class="seg-sub">Maraton</span></button>
+                </div>
             </div>
-            <div class="setting-group" style="margin-top:14px;">
-                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Saha Tipi</label>
-                <select id="courtTypeSelect">
-                    <option value="half">Yarım Saha (Klasik)</option>
-                    <option value="full" selected>Tam Saha (Serbest)</option>
-                </select>
+            <div class="setting-group">
+                <span class="seg-label">Saha Tipi</span>
+                <div class="segment" id="courtSegment">
+                    <button type="button" class="seg-option" data-value="half">Yarım<span class="seg-sub">Klasik</span></button>
+                    <button type="button" class="seg-option active" data-value="full">Tam<span class="seg-sub">Serbest</span></button>
+                </div>
             </div>
-            <div class="setting-group" id="difficultyGroup" style="margin-top:14px;display:none;">
-                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Bot Zorluğu</label>
-                <select id="difficultySelect">
-                    <option value="easy">Kolay</option>
-                    <option value="medium" selected>Orta</option>
-                    <option value="hard">Zor</option>
-                </select>
+            <div class="setting-group" id="difficultyGroup" style="display:none;">
+                <span class="seg-label">Bot Zorluğu</span>
+                <div class="segment" id="difficultySegment">
+                    <button type="button" class="seg-option" data-value="easy">Kolay</button>
+                    <button type="button" class="seg-option active" data-value="medium">Orta</button>
+                    <button type="button" class="seg-option" data-value="hard">Zor</button>
+                </div>
             </div>
-            <button id="confirmScoreLimit" style="margin-top:20px;">Oyunu Başlat</button>
+            <button id="confirmScoreLimit" class="btn btn-cta">Oyunu Başlat</button>
         </div>
     </div>
 
