@@ -1,0 +1,63 @@
+workflows:
+  ios-appstore:
+    name: iOS - App Store / TestFlight (signed)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    integrations:
+      app_store_connect: eskiturkce_asc
+    environment:
+      groups:
+        - ios_signing
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Sync iOS platform
+        script: |
+          npx cap add ios || true
+          npx cap sync ios
+      - name: Lock orientation to portrait
+        script: |
+          plutil -replace UISupportedInterfaceOrientations -json '["UIInterfaceOrientationPortrait"]' ios/App/App/Info.plist
+          plutil -replace "UISupportedInterfaceOrientations~ipad" -json '["UIInterfaceOrientationPortrait"]' ios/App/App/Info.plist || true
+          plutil -replace UIRequiresFullScreen -bool true ios/App/App/Info.plist 2>/dev/null || plutil -insert UIRequiresFullScreen -bool true ios/App/App/Info.plist
+      - name: Generate app icons
+        script: |
+          npx @capacitor/assets generate --ios --assetPath assets
+      - name: Set marketing version and build number
+        script: |
+          cd ios/App
+          agvtool new-marketing-version 1.0
+          agvtool new-version -all "$BUILD_NUMBER"
+      - name: Install CocoaPods
+        script: |
+          if [ -f ios/App/Podfile ]; then
+            cd ios/App && pod install
+          fi
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          echo "$CERT_KEY_B64" | base64 --decode > /tmp/ios_dist_key.pem
+          app-store-connect fetch-signing-files "com.b4ris.cilginhockey" \
+            --type IOS_APP_STORE \
+            --certificate-key=@file:/tmp/ios_dist_key.pem \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build signed .ipa
+        script: |
+          if [ -f ios/App/App.xcworkspace ]; then
+            CONTAINER="--workspace ios/App/App.xcworkspace"
+          else
+            CONTAINER="--project ios/App/App.xcodeproj"
+          fi
+          xcode-project build-ipa $CONTAINER --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
