@@ -86,7 +86,9 @@ function freshPhysics() {
         // p1 = bottom (green), p2 = top (red); lastX/Y used to derive paddle velocity
         p1: { x: FIELD_W / 2, y: FIELD_H - PADDLE_R * 2, lastX: FIELD_W / 2, lastY: FIELD_H - PADDLE_R * 2 },
         p2: { x: FIELD_W / 2, y: PADDLE_R * 2, lastX: FIELD_W / 2, lastY: PADDLE_R * 2 },
-        score: { player1: 0, player2: 0 }
+        score: { player1: 0, player2: 0 },
+        // Power-up state: epoch ms when each effect expires (0 = inactive)
+        powers: { speedUntil: 0, p1BigUntil: 0, p2BigUntil: 0, p1FreezeUntil: 0, p2FreezeUntil: 0 }
     };
 }
 
@@ -118,11 +120,12 @@ function clampPaddle(player, courtType, x, y) {
 // Returns 'contact' (overlapping this tick) so the caller can detect rising edges.
 // The bounce impulse is only applied on a *new* contact (paddle.wasContact === false),
 // so resting a paddle on the puck doesn't re-launch it or spam the hit sound every tick.
-function resolvePaddle(puck, paddle) {
+// paddleR defaults to PADDLE_R; pass a different value when a power-up is active.
+function resolvePaddle(puck, paddle, paddleR = PADDLE_R) {
     const dx = puck.x - paddle.x;
     const dy = puck.y - paddle.y;
     const dist = Math.hypot(dx, dy);
-    const minDist = PUCK_R + PADDLE_R;
+    const minDist = PUCK_R + paddleR;
     if (dist >= minDist) return false;
 
     // Contact normal. If the paddle is exactly centered on the puck (dist 0),
@@ -161,11 +164,11 @@ function resolvePaddle(puck, paddle) {
 
 // Push two paddles apart when they overlap. Neither paddle acquires velocity from
 // this — they simply can't occupy the same space.
-function resolvePaddles(pa, pb) {
+function resolvePaddles(pa, pb, rA = PADDLE_R, rB = PADDLE_R) {
     const dx   = pb.x - pa.x;
     const dy   = pb.y - pa.y;
     const dist = Math.hypot(dx, dy);
-    const min  = PADDLE_R * 2;
+    const min  = rA + rB;
     if (dist >= min || dist < 0.0001) return;
 
     // Overlap amount split evenly between both paddles
@@ -179,8 +182,10 @@ function resolvePaddles(pa, pb) {
 }
 
 // Drive the AI paddle (always player 2 / top). Called once per tick before stepRoom,
+// skipped entirely while the bot is frozen.
 // so the movement it makes this tick becomes its paddle velocity for hit impulses.
 function updateBot(room) {
+    if (Date.now() < (room.phys.powers?.p2FreezeUntil || 0)) return; // frozen
     const p = room.phys;
     const prof = room.bot.profile;
     const puck = p.puck;
@@ -221,13 +226,22 @@ function updateBot(room) {
 }
 
 function broadcastState(room) {
-    const p = room.phys;
+    const p   = room.phys;
+    const pw  = p.powers;
+    const now = Date.now();
     io.to(room.id).emit('state', {
         puck: { x: p.puck.x / FIELD_W, y: p.puck.y / FIELD_H },
         p1: { x: p.p1.x / FIELD_W, y: p.p1.y / FIELD_H },
         p2: { x: p.p2.x / FIELD_W, y: p.p2.y / FIELD_H },
         score: p.score,
-        puckSpeed: Math.hypot(p.puck.vx, p.puck.vy) / MAX_PUCK_SPEED  // normalized 0–1
+        puckSpeed: Math.hypot(p.puck.vx, p.puck.vy) / MAX_PUCK_SPEED,
+        powers: {
+            p1Big:    now < pw.p1BigUntil,
+            p2Big:    now < pw.p2BigUntil,
+            p1Frozen: now < pw.p1FreezeUntil,
+            p2Frozen: now < pw.p2FreezeUntil,
+            speed:    now < pw.speedUntil,
+        }
     });
 }
 
@@ -242,13 +256,19 @@ function stepRoom(room) {
     puck.x += puck.vx;
     puck.y += puck.vy;
 
+    // Compute effective paddle radii from active power-ups
+    const now = Date.now();
+    const pw  = p.powers;
+    const p1R = now < pw.p1BigUntil ? PADDLE_R * 1.9 : PADDLE_R;
+    const p2R = now < pw.p2BigUntil ? PADDLE_R * 1.9 : PADDLE_R;
+
     // Paddle–paddle collision: push them apart so they can't overlap.
-    resolvePaddles(p.p1, p.p2);
+    resolvePaddles(p.p1, p.p2, p1R, p2R);
 
     // Paddle–puck collisions (server is the only authority — no client conflict).
     // Emit 'hit' only on a rising edge (new contact), not every overlapping tick.
-    const c1 = resolvePaddle(puck, p.p1);
-    const c2 = resolvePaddle(puck, p.p2);
+    const c1 = resolvePaddle(puck, p.p1, p1R);
+    const c2 = resolvePaddle(puck, p.p2, p2R);
     // Tell clients which paddle was hit so each can flash the correct one.
     if (c1 && !p.p1.wasContact) io.to(room.id).emit('hit', { player: 1 });
     if (c2 && !p.p2.wasContact) io.to(room.id).emit('hit', { player: 2 });
@@ -257,11 +277,12 @@ function stepRoom(room) {
 
     // Friction
     const speed = Math.hypot(puck.vx, puck.vy);
+    const maxSpeed = now < pw.speedUntil ? MAX_PUCK_SPEED * 1.8 : MAX_PUCK_SPEED;
     if (speed > 0.2) {
         puck.vx *= FRICTION;
         puck.vy *= FRICTION;
-        if (speed > MAX_PUCK_SPEED) {
-            const s = MAX_PUCK_SPEED / speed;
+        if (speed > maxSpeed) {
+            const s = maxSpeed / speed;
             puck.vx *= s; puck.vy *= s;
         }
     } else {
@@ -548,10 +569,52 @@ io.on('connection', (socket) => {
         if (now - (lastInputAt.get(socket.id) || 0) < MIN_INPUT_INTERVAL_MS) return;
         lastInputAt.set(socket.id, now);
         const player = socket.id === room.host ? 1 : 2;
+        // Ignore input while player is frozen
+        const pw = room.phys.powers;
+        const frozenUntil = player === 1 ? pw.p1FreezeUntil : pw.p2FreezeUntil;
+        if (Date.now() < frozenUntil) return;
         const pos = clampPaddle(player, room.courtType, data.x * FIELD_W, data.y * FIELD_H);
         const paddle = player === 1 ? room.phys.p1 : room.phys.p2;
         paddle.x = pos.x;
         paddle.y = pos.y;
+    });
+
+    // Power-up activation
+    socket.on('usePower', (data) => {
+        const { power } = data || {};
+        const room = data && getMemberRoom(socket, data.roomId);
+        if (!room || !['speed', 'big', 'freeze'].includes(power)) return;
+
+        const player = socket.id === room.host ? 1 : 2;
+        const key    = `p${player}:${power}`;
+
+        // Server-side one-time-use guard
+        if (!room.usedPowers) room.usedPowers = new Set();
+        if (room.usedPowers.has(key)) return;
+        room.usedPowers.add(key);
+
+        const now = Date.now();
+        const pw  = room.phys.powers;
+
+        if (power === 'speed') {
+            // Immediately boost puck velocity, allow higher cap for 5 s
+            const puck = room.phys.puck;
+            const spd  = Math.hypot(puck.vx, puck.vy);
+            const target = Math.min(Math.max(spd * 1.7, 20), MAX_PUCK_SPEED * 1.8);
+            if (spd > 0.5) { const r = target / spd; puck.vx *= r; puck.vy *= r; }
+            else { puck.vx = target * 0.7; puck.vy = target * (player === 1 ? -0.7 : 0.7); }
+            pw.speedUntil = now + 5000;
+        } else if (power === 'big') {
+            if (player === 1) pw.p1BigUntil = now + 5000;
+            else              pw.p2BigUntil = now + 5000;
+        } else if (power === 'freeze') {
+            // Freeze the OPPONENT
+            if (player === 1) pw.p2FreezeUntil = now + 3000;
+            else              pw.p1FreezeUntil = now + 3000;
+        }
+
+        io.to(room.id).emit('powerActivated', { player, power });
+        log(`Power "${power}" used by player ${player} in room ${room.id}`);
     });
 
     // Reconnect support
