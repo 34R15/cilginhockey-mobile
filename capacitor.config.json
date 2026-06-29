@@ -1,0 +1,8 @@
+{
+  "appId": "com.b4ris.cilginhockey",
+  "appName": "Cilgin Hockey",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

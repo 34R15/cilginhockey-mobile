@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Air Hockey Game</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background: #1a1a1a;
+        }
+        
+        @media (orientation: landscape) {
+            #gameCanvas, #menu, #nameForm {
+                display: none !important;
+            }
+            #rotateMessage {
+                display: block !important;
+                font-size: 24px;
+                text-align: center;
+                margin-top: 50%;
+                color: white;
+            }
+        }
+        @media (orientation: portrait) {
+            #rotateMessage {
+                display: none !important;
+            }
+        }
+
+        #nameForm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #FF7043;
+            background-image: url('assets/images/cilginhokey.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 1000;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+            min-height: 100vh;
+            box-shadow: none;
+        }
+
+        #nameForm .form-content {
+            width: 95vw;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #nameForm h2 {
+            color: white;
+            font-size: 38px;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #nameForm input {
+            padding: 25px 20px;
+            margin: 10px auto 15px auto;
+            font-size: 26px;
+            border-radius: 20px;
+            border: none;
+            width: 85%;
+            max-width: 380px;
+            box-sizing: border-box;
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: box-shadow 0.2s;
+        }
+
+        #nameForm input:focus {
+            box-shadow: 0 0 0 2px #4CAF50;
+        }
+
+        #nameForm button {
+            padding: 25px 0;
+            margin: 0 auto;
+            font-size: 28px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 380px;
+            border: none;
+            background: linear-gradient(90deg, #103592 0%, #4569b7 50%, #2C5364 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        #nameForm button:active {
+            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+        }
+
+        /* Score Limit Select Styling */
+        .score-limit-container {
+            margin: 16px 0 20px 0;
+            width: 90vw;
+            max-width: 320px;
+        }
+        
+        .score-limit-container label {
+            display: block;
+            margin-bottom: 12px;
+            color: white;
+            font-size: 20px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .score-limit-container select {
+            width: 100%;
+            padding: 18px 16px;
+            font-size: 22px;
+            border-radius: 12px;
+            border: none;
+            background: #222;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transition: box-shadow 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px top 50%;
+            background-size: 12px auto;
+            padding-right: 40px;
+        }
+        
+        .score-limit-container select:focus {
+            box-shadow: 0 0 0 2px #4CAF50;
+            outline: none;
+        }
+        
+        .score-limit-container select option {
+            padding: 16px;
+            background: #222;
+            color: #fff;
+            font-size: 20px;
+        }
+
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 100px 30px 90px 30px;
+            border-radius: 45px;
+            text-align: center;
+            color: white;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            background-color: #FF7043;
+            min-height: 600px;
+            width: 95vw;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #mainMenu {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #menu input {
+            padding: 25px 20px;
+            margin: 10px auto;
+            font-size: 26px;
+            border-radius: 20px;
+            border: none;
+            width: 85%;
+            max-width: 380px;
+            box-sizing: border-box;
+            outline: none;
+            background: rgba(34, 34, 34, 0.95);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: box-shadow 0.2s;
+        }
+
+        #menu button {
+            padding: 25px 0;
+            margin: 10px auto;
+            font-size: 28px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 380px;
+            border: none;
+            background: linear-gradient(90deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        #menu button:active {
+            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .join-room {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            background: #000;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #waitingRoom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+        }
+        .room-id-box {
+            background: rgba(0, 0, 0, 0.9);
+            border: 2.5px solid #39ff14;
+            border-radius: 16px;
+            padding: 18px 32px;
+            margin: 18px 0 18px 0;
+            font-size: 2.2rem;
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            color: #39ff14;
+            letter-spacing: 2px;
+            font-weight: bold;
+            box-shadow: 0 2px 12px rgba(57,255,20,0.08);
+            user-select: all;
+            text-align: center;
+        }
+        .copy-btn {
+            margin-top: 8px;
+            background: #222;
+            color: #0066ff;
+            border: 1.5px solid #0066ff;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 1.1rem;
+            font-family: 'Roboto Mono', monospace;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .copy-btn:active {
+            color: #fff;
+        }
+        .share-btn {
+            color: #25d366;
+            border-color: #25d366;
+            margin-left: 8px;
+        }
+        .share-btn:active {
+            background: #25d366;
+            color: #fff;
+        }
+        .waiting-dots::after {
+            content: '';
+            animation: dots 1.4s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%   { content: ''; }
+            25%  { content: '.'; }
+            50%  { content: '..'; }
+            75%  { content: '...'; }
+        }
+        .waiting-desc {
+            color: #fff;
+            font-size: 1.15rem;
+            margin: 8px 0 0 0;
+            text-align: center;
+            font-family: 'Montserrat', 'Arial', sans-serif;
+            opacity: 0.85;
+        }
+        .waiting-title {
+            color: #fff;
+            font-size: 2.1rem;
+            font-family: 'Montserrat', 'Arial', sans-serif;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px #000;
+        }
+
+        #startCountdown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.78);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 6rem;
+            color: #39ff14;
+            font-family: 'Montserrat', 'Arial', sans-serif;
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 4px 16px #000;
+            transition: opacity 0.35s;
+            opacity: 1;
+            pointer-events: none;
+            text-align: center;
+        }
+        @keyframes countdownPop {
+            0%   { transform: scale(2.8); opacity: 0; }
+            35%  { transform: scale(0.88); opacity: 1; }
+            65%  { transform: scale(1.06); opacity: 1; }
+            100% { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes countdownGo {
+            0%   { transform: scale(0.5); opacity: 0; letter-spacing: 16px; }
+            40%  { transform: scale(1.15); opacity: 1; letter-spacing: 6px; }
+            100% { transform: scale(1);    opacity: 1; letter-spacing: 4px; }
+        }
+
+        /* Score Selection Popup Styling */
+        #scoreLimitPopup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            background-image: url('assets/images/cilginhokey.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .popup-content {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 32px 20px 28px 20px;
+            border-radius: 18px;
+            width: 90vw;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        }
+
+        .popup-content h2 {
+            color: white;
+            font-size: 24px;
+            margin: 0 0 20px 0;
+        }
+
+        .popup-content select {
+            width: 100%;
+            padding: 18px 16px;
+            font-size: 22px;
+            border-radius: 12px;
+            border: none;
+            background: #222;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transition: box-shadow 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px top 50%;
+            background-size: 12px auto;
+            padding-right: 40px;
+            margin-bottom: 20px;
+        }
+
+        .popup-content select:focus {
+            box-shadow: 0 0 0 2px #4CAF50;
+            outline: none;
+        }
+
+        .popup-content button {
+            padding: 18px 0;
+            font-size: 22px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(90deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
+            color: white;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        .popup-content button:active {
+            background: linear-gradient(90deg, #0a1518 0%, #15262c 50%, #1d3640 100%);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+        }
+
+        #rotateMessage {
+            display: none;
+        }
+
+        #nameForm button, #menu button, .popup-content button, .copy-btn:active {
+            background: radial-gradient(circle at center, #0066ff 0%, #001e68 100%);
+        }
+
+        #nameForm button:active, #menu button:active, .popup-content button:active {
+            background: radial-gradient(circle at center, #004acc 0%, #001855 100%);
+        }
+
+        /* Toast Bildirimi Stilleri */
+        .toast-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Gol Animasyonu Stilleri */
+        .goal-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 72px;
+            font-weight: bold;
+            text-shadow: 0 0 20px currentColor,
+                         0 0 40px currentColor;
+            z-index: 2000;
+            opacity: 0;
+            display: none;
+            font-family: 'Montserrat', 'Arial', sans-serif;
+            letter-spacing: 2px;
+            pointer-events: none;
+            text-align: center;
+            transition: none;
+        }
+
+        .goal-animation.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            animation: goalPulse 1.5s ease-in-out forwards;
+        }
+
+        @keyframes goalPulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="game.js"></script>
+
+    <div id="nameForm">
+        <div class="form-content">
+            <h2>İsminizi Girin</h2>
+            <input type="text" id="playerNameInput" placeholder="İsminiz" maxlength="10">
+            <button id="submitNameBtn">Başla!</button>
+        </div>
+    </div>
+
+    <div id="menu" style="display: none;">
+        <div id="mainMenu">
+            <button id="createRoomBtn" class="menu-button">Oda Oluştur</button>
+            <div class="input-group">
+                <input type="number" inputmode="numeric" pattern="[0-9]*" id="roomId" placeholder="Oda Kodunu Girin" class="menu-input">
+                <button id="joinRoomBtn" class="menu-button">Odaya Katıl</button>
+            </div>
+            <button id="backToNameBtn" class="menu-button" style="background: linear-gradient(90deg, #FF416C 0%, #FF4B2B 100%);">Geri Dön</button>
+        </div>
+        <div id="waitingRoom" style="display: none;">
+            <div class="waiting-title">Oda Oluşturuldu!</div>
+            <div class="room-id-box" id="currentRoomId"></div>
+            <div style="display:flex;gap:0;justify-content:center;flex-wrap:wrap;">
+                <button class="copy-btn" id="copyRoomBtn">Kodu Kopyala</button>
+                <button class="copy-btn share-btn" id="shareRoomBtn">Paylaş</button>
+            </div>
+            <div class="waiting-desc">Bu kodu rakibinle paylaş ve<br>rakibin katılmasını bekle</div>
+            <div class="waiting-desc waiting-dots" style="margin-top:12px;font-size:1.3rem;letter-spacing:2px;opacity:0.7;">Rakip bekleniyor</div>
+        </div>
+    </div>
+
+    <!-- Score Limit Selection Popup -->
+    <div id="scoreLimitPopup" class="popup">
+        <div class="popup-content">
+            <h2>Oyun Ayarları</h2>
+            <div class="setting-group">
+                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Kazanma Skoru</label>
+                <select id="scoreLimitSelect">
+                    <option value="3">3 Gol — Hızlı Maç</option>
+                    <option value="5" selected>5 Gol — Normal</option>
+                    <option value="7">7 Gol — Uzun Maç</option>
+                    <option value="10">10 Gol — Maraton</option>
+                </select>
+            </div>
+            <div class="setting-group" style="margin-top:14px;">
+                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Saha Tipi</label>
+                <select id="courtTypeSelect">
+                    <option value="half">Yarım Saha (Klasik)</option>
+                    <option value="full" selected>Tam Saha (Serbest)</option>
+                </select>
+            </div>
+            <button id="confirmScoreLimit" style="margin-top:20px;">Oyunu Başlat</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="rotateMessage">Lütfen telefonunuzu dikey konuma çevirin!</div>
+    
+    <div id="startCountdown" style="display:none;"></div>
+    
+    <div id="toast" class="toast-notification">Oda kodu kopyalandı!</div>
+    
+    <div id="goalAnimation" class="goal-animation" style="display:none;">GOOOL!</div>
+</body>
+</html> 
