@@ -43,9 +43,10 @@ workflows:
           app-store-connect fetch-signing-files "com.b4ris.cilginhockey" \
             --type IOS_APP_STORE \
             --certificate-key=@file:/tmp/ios_dist_key.pem \
-            --create
+            --create \
+            --platform IOS
           keychain add-certificates
-          xcode-project use-profiles
+          xcode-project use-profiles --warn-only
       - name: Build signed .ipa
         script: |
           if [ -f ios/App/App.xcworkspace ]; then
