@@ -210,16 +210,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'searchingOverlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
-                'background:rgba(0,0,0,0.88);color:#fff;display:flex;flex-direction:column;' +
-                'align-items:center;justify-content:center;text-align:center;z-index:1600;' +
-                "font-family:'Montserrat','Arial',sans-serif;padding:24px;gap:22px;";
+            // Full-screen backdrop; grid place-items centers the card on both axes.
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:1600;display:grid;place-items:center;' +
+                'background:rgba(8,8,22,0.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);' +
+                "font-family:'Montserrat','Arial',sans-serif;padding:24px;box-sizing:border-box;";
             overlay.innerHTML =
-                '<div style="font-size:22px;opacity:0.95;">Rakip aranıyor...</div>' +
-                '<div class="qm-spinner" style="width:46px;height:46px;border:4px solid rgba(255,255,255,0.25);' +
-                'border-top-color:#ffd200;border-radius:50%;animation:qmspin 0.9s linear infinite;"></div>' +
-                '<button id="cancelSearchBtn" style="padding:14px 28px;font-size:17px;border:none;border-radius:12px;' +
-                'background:linear-gradient(90deg,#FF416C 0%,#FF4B2B 100%);color:#fff;font-weight:bold;cursor:pointer;">İptal</button>';
+                '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:24px;' +
+                'padding:34px 30px;border-radius:26px;background:rgba(255,255,255,0.06);' +
+                'border:1px solid rgba(255,255,255,0.14);box-shadow:0 24px 60px rgba(0,0,0,0.55);">' +
+                  '<div style="font-family:\'Orbitron\',sans-serif;font-size:19px;font-weight:700;letter-spacing:0.5px;color:#eef1f8;">Rakip Aranıyor</div>' +
+                  '<div class="qm-spinner" style="width:54px;height:54px;border:4px solid rgba(255,255,255,0.18);' +
+                  'border-top-color:#22d3ee;border-radius:50%;animation:qmspin 0.9s linear infinite;"></div>' +
+                  '<button id="cancelSearchBtn" style="padding:13px 34px;font-size:16px;border:none;border-radius:14px;' +
+                  'background:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);color:#fff;font-weight:700;cursor:pointer;' +
+                  'box-shadow:0 8px 22px rgba(124,58,237,0.4);">İptal</button>' +
+                '</div>';
             document.body.appendChild(overlay);
             // Keyframes for the spinner (added once)
             if (!document.getElementById('qmSpinStyle')) {
@@ -230,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             overlay.querySelector('#cancelSearchBtn').addEventListener('click', cancelQuickMatch);
         }
-        overlay.style.display = 'flex';
+        overlay.style.display = 'grid';
     }
 
     function hideSearching() {
@@ -852,44 +857,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         playerName = name;
-        
+
+        // İsim girişi bittiyse klavyeyi kapat (ekran kaymasın)
+        nameInput.blur();
+
         // Hide name form and show menu
         document.getElementById('nameForm').style.display = 'none';
         document.getElementById('menu').style.display = 'block';
-        
-        // iOS için özel fokus yönetimi
-        const roomIdInput = document.getElementById('roomId');
-        if (roomIdInput) {
-            // iOS için hem click hem touch event ekleyelim
-            const focusRoomInput = () => {
-                // Kısa bir gecikme ile fokuslanma
-                setTimeout(() => {
-                    roomIdInput.focus();
-                    // iOS için ek olarak tıklama simülasyonu
-                    roomIdInput.click();
-                }, 300);
-            };
-
-            // İlk fokuslanma denemesi
-            focusRoomInput();
-
-            // Menü görünür olduğunda tekrar deneyelim
-            const menuElement = document.getElementById('menu');
-            if (menuElement) {
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.target.style.display === 'block') {
-                            focusRoomInput();
-                        }
-                    });
-                });
-
-                observer.observe(menuElement, {
-                    attributes: true,
-                    attributeFilter: ['style']
-                });
-            }
-        }
+        // Not: oda kodu input'una otomatik fokus YOK — yoksa menü açılır açılmaz
+        // klavye açılıp ekranı kaydırıyor. Kullanıcı isteyince dokunur.
     }
 
     // Event Listeners
@@ -949,11 +925,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameForm = document.getElementById('nameForm');
             if (nameForm) {
                 nameForm.style.display = 'flex';
-                // İsim inputunu temizle ve fokusla
+                // İsim inputunu temizle (otomatik fokus YOK — klavye kendiliğinden açılmasın)
                 const nameInput = document.getElementById('playerNameInput');
                 if (nameInput) {
                     nameInput.value = '';
-                    nameInput.focus();
+                    nameInput.blur();
                 }
             }
             
