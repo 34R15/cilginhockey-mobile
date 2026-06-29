@@ -545,6 +545,8 @@
 
     <div id="menu" style="display: none;">
         <div id="mainMenu">
+            <button id="quickPlayBtn" class="menu-button" style="background: linear-gradient(90deg, #f7971e 0%, #ffd200 100%);">Hızlı Oyna</button>
+            <button id="botPlayBtn" class="menu-button" style="background: linear-gradient(90deg, #8E2DE2 0%, #4A00E0 100%);">Tek Oyuncu (Bot)</button>
             <button id="createRoomBtn" class="menu-button">Oda Oluştur</button>
             <div class="input-group">
                 <input type="number" inputmode="numeric" pattern="[0-9]*" id="roomId" placeholder="Oda Kodunu Girin" class="menu-input">
@@ -582,6 +584,14 @@
                 <select id="courtTypeSelect">
                     <option value="half">Yarım Saha (Klasik)</option>
                     <option value="full" selected>Tam Saha (Serbest)</option>
+                </select>
+            </div>
+            <div class="setting-group" id="difficultyGroup" style="margin-top:14px;display:none;">
+                <label style="display:block;color:#aaa;font-size:13px;text-align:left;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Bot Zorluğu</label>
+                <select id="difficultySelect">
+                    <option value="easy">Kolay</option>
+                    <option value="medium" selected>Orta</option>
+                    <option value="hard">Zor</option>
                 </select>
             </div>
             <button id="confirmScoreLimit" style="margin-top:20px;">Oyunu Başlat</button>

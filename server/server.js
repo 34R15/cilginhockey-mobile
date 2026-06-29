@@ -44,6 +44,34 @@ const socketToRoom = new Map();
 const disconnectTimers = new Map();
 const REJOIN_GRACE_MS = 20000;
 
+// ── Bot / AI opponent profiles ──────────────────────────────────────────────
+// speed  : max virtual px the bot paddle can travel per tick
+// react  : 0–1 multiplier on how decisively it moves toward its target
+// errorPx: random target offset so weaker bots misjudge and miss
+const BOT_PROFILES = {
+    easy:   { speed: 7,  react: 0.55, errorPx: 75 },
+    medium: { speed: 12, react: 0.82, errorPx: 32 },
+    hard:   { speed: 19, react: 1.0,  errorPx: 0  }
+};
+const BOT_HOME_Y = PADDLE_R * 2.2;   // bot's defensive resting line (near its goal)
+const BOT_SENTINEL = 'BOT';          // placeholder socket id for the AI "guest"
+
+// ── Quick-match (random matchmaking) ────────────────────────────────────────
+const matchQueue = [];               // [{ id, name }] players waiting for a random opponent
+const QUICK_MATCH_SCORE_LIMIT = 5;
+const QUICK_MATCH_COURT = 'full';
+
+function removeFromQueue(socketId) {
+    const i = matchQueue.findIndex(e => e.id === socketId);
+    if (i !== -1) matchQueue.splice(i, 1);
+}
+
+// Input flood protection: drop paddle inputs that arrive faster than this.
+// Physics runs at 60Hz, so accepting more than ~125 inputs/sec is pointless;
+// anything faster is either jitter or a malicious flood.
+const MIN_INPUT_INTERVAL_MS = 8;   // ~125 inputs/sec ceiling per socket
+const lastInputAt = new Map();     // socket.id -> last accepted input timestamp
+
 function getMemberRoom(socket, roomId) {
     if (socketToRoom.get(socket.id) !== roomId) return null;
     const room = rooms.get(roomId);
@@ -131,6 +159,48 @@ function resolvePaddle(puck, paddle) {
     return true;
 }
 
+// Drive the AI paddle (always player 2 / top). Called once per tick before stepRoom,
+// so the movement it makes this tick becomes its paddle velocity for hit impulses.
+function updateBot(room) {
+    const p = room.phys;
+    const prof = room.bot.profile;
+    const puck = p.puck;
+    const bot = p.p2;
+
+    let tx, ty;
+    const puckInBotHalf = puck.y < FIELD_H / 2;
+    if (puckInBotHalf && puck.vy < 1.5) {
+        // Attack: slip just above the puck and shove it down toward the player.
+        tx = puck.x;
+        ty = puck.y - (PUCK_R + PADDLE_R) * 0.55;
+    } else {
+        // Defend: fall back to the goal line, mirroring the puck's x to block.
+        tx = puck.x;
+        ty = BOT_HOME_Y;
+    }
+
+    // Weaker bots aim imperfectly
+    if (prof.errorPx) {
+        tx += (Math.random() - 0.5) * prof.errorPx;
+        ty += (Math.random() - 0.5) * prof.errorPx * 0.5;
+    }
+
+    // Move toward the target, capped by the profile's max speed
+    const dx = tx - bot.x;
+    const dy = ty - bot.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0.01) {
+        const step = Math.min(dist, prof.speed) * prof.react;
+        bot.x += (dx / dist) * step;
+        bot.y += (dy / dist) * step;
+    }
+
+    // Keep the bot inside its allowed half/region
+    const pos = clampPaddle(2, room.courtType, bot.x, bot.y);
+    bot.x = pos.x;
+    bot.y = pos.y;
+}
+
 function broadcastState(room) {
     const p = room.phys;
     io.to(room.id).emit('state', {
@@ -157,7 +227,9 @@ function stepRoom(room) {
     // Emit 'hit' only on a rising edge (new contact), not every overlapping tick.
     const c1 = resolvePaddle(puck, p.p1);
     const c2 = resolvePaddle(puck, p.p2);
-    if ((c1 && !p.p1.wasContact) || (c2 && !p.p2.wasContact)) io.to(room.id).emit('hit');
+    // Tell clients which paddle was hit so each can flash the correct one.
+    if (c1 && !p.p1.wasContact) io.to(room.id).emit('hit', { player: 1 });
+    if (c2 && !p.p2.wasContact) io.to(room.id).emit('hit', { player: 2 });
     p.p1.wasContact = c1;
     p.p2.wasContact = c2;
 
@@ -234,11 +306,19 @@ function startLoop(room) {
     room.phys.p1.wasContact = false;
     room.phys.p2.wasContact = false;
     room.loop = setInterval(() => {
-        // Update paddle velocities snapshot, then step
-        const p = room.phys;
-        stepRoom(room);
-        p.p1.lastX = p.p1.x; p.p1.lastY = p.p1.y;
-        p.p2.lastX = p.p2.x; p.p2.lastY = p.p2.y;
+        // Isolate each room: an error in one room's physics must not crash the whole
+        // server (which would drop every other live game). Kill just the bad room.
+        try {
+            const p = room.phys;
+            if (room.bot) updateBot(room);   // move the AI paddle before physics integration
+            stepRoom(room);
+            p.p1.lastX = p.p1.x; p.p1.lastY = p.p1.y;
+            p.p2.lastX = p.p2.x; p.p2.lastY = p.p2.y;
+        } catch (err) {
+            console.error('Physics error in room', room.id, err);
+            io.to(room.id).emit('roomError', 'Oyunda bir hata oluştu');
+            destroyRoom(room.id);
+        }
     }, 1000 / TICK_HZ);
     log('Physics loop started for room', room.id);
 }
@@ -298,6 +378,111 @@ io.on('connection', (socket) => {
         log('Room created:', roomId);
     });
 
+    // Single-player: create a room whose "guest" is a server-side AI.
+    socket.on('createBotRoom', (data) => {
+        const { playerName, scoreLimit, courtType, difficulty } = data || {};
+        const safeScoreLimit = [3, 5, 7, 10].includes(Number(scoreLimit)) ? Number(scoreLimit) : 5;
+        const profile = BOT_PROFILES[difficulty] || BOT_PROFILES.medium;
+
+        // Generate a unique, non-colliding room id (prefixed so it never clashes with
+        // the 4-digit human codes).
+        let roomId;
+        do { roomId = 'bot-' + Math.random().toString(36).slice(2, 8); } while (rooms.has(roomId));
+
+        const room = {
+            id: roomId,
+            host: socket.id,
+            hostName: playerName,
+            guest: BOT_SENTINEL,            // AI occupies the guest slot
+            guestName: 'Bilgisayar',
+            scoreLimit: safeScoreLimit,
+            courtType: courtType === 'half' ? 'half' : 'full',
+            gameOver: false,
+            ready1: false,
+            ready2: true,                   // the bot is always "ready"
+            loop: null,
+            serveTimer: null,
+            bot: { difficulty: BOT_PROFILES[difficulty] ? difficulty : 'medium', profile },
+            phys: freshPhysics()
+        };
+        rooms.set(roomId, room);
+        socketToRoom.set(socket.id, roomId);
+        socket.join(roomId);
+        socket.emit('botGameStart', {
+            roomId,
+            scoreLimit: safeScoreLimit,
+            courtType: room.courtType,
+            botName: room.guestName
+        });
+        log('Bot room created:', roomId, 'difficulty:', room.bot.difficulty);
+    });
+
+    // Quick-match: pair with a random waiting opponent, or wait in the queue.
+    socket.on('quickMatch', (data) => {
+        const playerName = (data && data.playerName) || 'Oyuncu';
+        // Already in a room? ignore.
+        if (socketToRoom.has(socket.id)) return;
+        // Already queued? just re-confirm searching.
+        if (matchQueue.some(e => e.id === socket.id)) { socket.emit('searchingMatch'); return; }
+
+        // Find a still-connected waiting opponent (skip stale entries).
+        let opp = null;
+        while (matchQueue.length > 0) {
+            const candidate = matchQueue.shift();
+            if (candidate.id !== socket.id && io.sockets.sockets.get(candidate.id)) { opp = candidate; break; }
+        }
+
+        if (!opp) {
+            matchQueue.push({ id: socket.id, name: playerName });
+            socket.emit('searchingMatch');
+            log('Queued for quick match:', socket.id);
+            return;
+        }
+
+        // Pair them — opponent is host (player 1), the new arrival is guest (player 2).
+        let roomId;
+        do { roomId = 'qm-' + Math.random().toString(36).slice(2, 8); } while (rooms.has(roomId));
+
+        const room = {
+            id: roomId,
+            host: opp.id,
+            hostName: opp.name,
+            guest: socket.id,
+            guestName: playerName,
+            scoreLimit: QUICK_MATCH_SCORE_LIMIT,
+            courtType: QUICK_MATCH_COURT,
+            gameOver: false,
+            ready1: false,
+            ready2: false,
+            loop: null,
+            serveTimer: null,
+            phys: freshPhysics()
+        };
+        rooms.set(roomId, room);
+        socketToRoom.set(opp.id, roomId);
+        socketToRoom.set(socket.id, roomId);
+        const oppSocket = io.sockets.sockets.get(opp.id);
+        if (oppSocket) oppSocket.join(roomId);
+        socket.join(roomId);
+
+        // Tell each side who they are, then start.
+        io.to(opp.id).emit('matchFound', {
+            roomId, playerNumber: 1, opponentName: playerName,
+            scoreLimit: room.scoreLimit, courtType: room.courtType
+        });
+        socket.emit('matchFound', {
+            roomId, playerNumber: 2, opponentName: opp.name,
+            scoreLimit: room.scoreLimit, courtType: room.courtType
+        });
+        io.to(roomId).emit('gameStart');
+        log('Quick match paired:', opp.id, '<->', socket.id, 'room', roomId);
+    });
+
+    socket.on('cancelMatch', () => {
+        removeFromQueue(socket.id);
+        log('Quick match cancelled:', socket.id);
+    });
+
     socket.on('joinRoom', (data) => {
         const { roomId, playerName } = data || {};
         if (!roomId) return;
@@ -333,6 +518,13 @@ io.on('connection', (socket) => {
         const room = data && getMemberRoom(socket, data.roomId);
         if (!room) return;
         if (typeof data.x !== 'number' || typeof data.y !== 'number') return;
+        // Ignore non-finite / out-of-range coordinates (malformed or malicious)
+        if (!Number.isFinite(data.x) || !Number.isFinite(data.y)) return;
+        if (data.x < -0.5 || data.x > 1.5 || data.y < -0.5 || data.y > 1.5) return;
+        // Throttle: drop inputs arriving faster than MIN_INPUT_INTERVAL_MS
+        const now = Date.now();
+        if (now - (lastInputAt.get(socket.id) || 0) < MIN_INPUT_INTERVAL_MS) return;
+        lastInputAt.set(socket.id, now);
         const player = socket.id === room.host ? 1 : 2;
         const pos = clampPaddle(player, room.courtType, data.x * FIELD_W, data.y * FIELD_H);
         const paddle = player === 1 ? room.phys.p1 : room.phys.p2;
@@ -369,6 +561,8 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         log('User disconnected:', socket.id);
+        lastInputAt.delete(socket.id);
+        removeFromQueue(socket.id);
         const roomId = socketToRoom.get(socket.id);
         if (!roomId) return;
         const room = rooms.get(roomId);
@@ -399,6 +593,49 @@ io.on('connection', (socket) => {
         disconnectTimers.set(roomId, timer);
     });
 });
+
+// ── Resilience ──────────────────────────────────────────────────────────────
+// Single-instance deploy: room state lives in memory, so the priority is keeping
+// the process alive and cleaning up after itself. (Horizontal scaling / surviving
+// a restart would need a Redis adapter + shared state — deferred until traffic
+// actually demands it.)
+
+// Never let one stray error take down every live game.
+process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+
+// Reap abandoned rooms: if neither participant has a live socket anymore, the
+// disconnect grace already covers most cases, but this catches anything that slips
+// through (e.g. a room created and instantly abandoned before any disconnect fired).
+setInterval(() => {
+    for (const [roomId, room] of rooms) {
+        const hostLive = room.host && io.sockets.sockets.get(room.host);
+        const guestLive = room.guest === BOT_SENTINEL || (room.guest && io.sockets.sockets.get(room.guest));
+        // Keep rooms that still have at least one human present, or are within their
+        // reconnect grace window (a disconnect timer is pending).
+        if (!hostLive && !guestLive && !disconnectTimers.has(roomId)) {
+            log('Reaping abandoned room', roomId);
+            destroyRoom(roomId);
+        }
+    }
+}, 60000);
+
+// Graceful shutdown: tell clients before we go so they show a clear message
+// instead of silently hanging on the reconnect overlay.
+let shuttingDown = false;
+function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}, shutting down gracefully...`);
+    io.emit('serverRestarting');
+    for (const [, room] of rooms) stopLoop(room);
+    io.close();
+    http.close(() => process.exit(0));
+    // Failsafe: force-exit if close() hangs
+    setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {

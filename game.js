@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let opponentName = "Bekleniyor...";
     let scoreLimit = 5; // Varsayılan skor limiti
     let courtType = 'half'; // Varsayılan saha tipi
+    let pendingBotMode = false; // true while the settings popup was opened for single-player (bot)
     // Render state (canvas coords). The puck and the opponent paddle come from the
     // server; our own paddle is predicted locally for instant feedback.
     let paddle1 = { x: 0, y: 0 };
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let score = { player1: 0, player2: 0 };
     // Hit flash timestamp (ms) — used for visual impact glow on own paddle
     let hitFlashTime = 0;
+    let hitFlashPlayer = 0; // which paddle to flash on contact (1 or 2)
     // Puck speed from server (normalized 0-1); used for speed-glow visualization
     let puckSpeed = 0;
     // Cancel functions for reconnect countdowns (opponent + self)
@@ -200,6 +202,55 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideOverlay() {
         const overlay = document.getElementById('reconnectOverlay');
         if (overlay) overlay.style.display = 'none';
+    }
+
+    // Quick-match "searching for opponent" overlay with a cancel button.
+    function showSearching() {
+        let overlay = document.getElementById('searchingOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'searchingOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
+                'background:rgba(0,0,0,0.88);color:#fff;display:flex;flex-direction:column;' +
+                'align-items:center;justify-content:center;text-align:center;z-index:1600;' +
+                "font-family:'Montserrat','Arial',sans-serif;padding:24px;gap:22px;";
+            overlay.innerHTML =
+                '<div style="font-size:22px;opacity:0.95;">Rakip aranıyor...</div>' +
+                '<div class="qm-spinner" style="width:46px;height:46px;border:4px solid rgba(255,255,255,0.25);' +
+                'border-top-color:#ffd200;border-radius:50%;animation:qmspin 0.9s linear infinite;"></div>' +
+                '<button id="cancelSearchBtn" style="padding:14px 28px;font-size:17px;border:none;border-radius:12px;' +
+                'background:linear-gradient(90deg,#FF416C 0%,#FF4B2B 100%);color:#fff;font-weight:bold;cursor:pointer;">İptal</button>';
+            document.body.appendChild(overlay);
+            // Keyframes for the spinner (added once)
+            if (!document.getElementById('qmSpinStyle')) {
+                const st = document.createElement('style');
+                st.id = 'qmSpinStyle';
+                st.textContent = '@keyframes qmspin{to{transform:rotate(360deg)}}';
+                document.head.appendChild(st);
+            }
+            overlay.querySelector('#cancelSearchBtn').addEventListener('click', cancelQuickMatch);
+        }
+        overlay.style.display = 'flex';
+    }
+
+    function hideSearching() {
+        const overlay = document.getElementById('searchingOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    let searching = false;
+    function startQuickMatch() {
+        if (searching) return;
+        searching = true;
+        if (!socket.connected) socket.connect();
+        showSearching();
+        socket.emit('quickMatch', { playerName });
+    }
+
+    function cancelQuickMatch() {
+        searching = false;
+        socket.emit('cancelMatch');
+        hideSearching();
     }
 
     // Countdown helper — shows a ticking overlay; returns a cancel function
@@ -396,11 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillText(score.player1.toString(), canvas.width/2, canvas.height * 3/4);
         }
 
-        // Hit flash: radial glow behind own paddle on contact
+        // Hit flash: radial glow behind whichever paddle actually struck the puck
         const flashAge = Date.now() - hitFlashTime;
         if (hitFlashTime > 0 && flashAge < 250) {
             const alpha = (1 - flashAge / 250) * 0.9;
-            const ownP = playerNumber === 1 ? paddle1 : paddle2;
+            const ownP = hitFlashPlayer === 1 ? paddle1 : paddle2;
             ctx.save();
             ctx.translate(ownP.x, ownP.y);
             const g = ctx.createRadialGradient(0, 0, PADDLE_RADIUS * 0.5, 0, 0, PADDLE_RADIUS * 2.4);
@@ -472,9 +523,71 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Soft-reset back to the main menu without reloading the page (Capacitor-friendly:
+    // location.reload() causes a white flash + full socket teardown on iOS WebView).
+    // Keeps the entered player name; tears down the current game/socket-room cleanly.
+    function resetToMenu() {
+        // Stop gameplay & rendering
+        gameStarted = false;
+        renderRunning = false;
+        gamePaused = false;
+        hasJoinedGame = false;
+        removeGameEventListeners();
+
+        // Cancel any countdown overlays
+        if (reconnectCountdownTimer) { reconnectCountdownTimer(); reconnectCountdownTimer = null; }
+        if (selfDisconnectCancel) { selfDisconnectCancel(); selfDisconnectCancel = null; }
+        hideOverlay();
+        searching = false;
+        hideSearching();
+
+        // Reset game state (keep playerName so user doesn't re-enter it)
+        playerNumber = null;
+        roomId = null;
+        score = { player1: 0, player2: 0 };
+        opponentName = "Bekleniyor...";
+        puckSpeed = 0;
+        hitFlashTime = 0;
+
+        // Remove the game-over dialog if present
+        const go = document.getElementById('gameOverDialog');
+        if (go) go.remove();
+
+        // Hide gameplay UI
+        const canvasEl = document.getElementById('gameCanvas');
+        if (canvasEl) canvasEl.style.display = 'none';
+        const goalAnim = document.getElementById('goalAnimation');
+        if (goalAnim) { goalAnim.style.display = 'none'; goalAnim.classList.remove('show'); }
+        const startCountdown = document.getElementById('startCountdown');
+        if (startCountdown) startCountdown.style.display = 'none';
+
+        // Show the menu (player already named) on the main-menu screen
+        const menu = document.getElementById('menu');
+        const mainMenu = document.getElementById('mainMenu');
+        const waitingRoom = document.getElementById('waitingRoom');
+        const scoreLimitPopup = document.getElementById('scoreLimitPopup');
+        if (waitingRoom) waitingRoom.style.display = 'none';
+        if (scoreLimitPopup) scoreLimitPopup.style.display = 'none';
+        if (mainMenu) mainMenu.style.display = 'block';
+        if (menu) menu.style.display = 'block';
+
+        // Clear the room-code input
+        const roomInput = document.getElementById('roomId');
+        if (roomInput) roomInput.value = '';
+
+        // Refresh the socket so stale room references on the server are dropped
+        if (socket) {
+            socket.disconnect();
+            socket.connect();
+        }
+
+        window.scrollTo(0, 0);
+    }
+
     // Show game over message
     function showGameOver(message) {
         const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'gameOverDialog';
         gameOverDiv.style.position = 'fixed';
         gameOverDiv.style.top = '0';
         gameOverDiv.style.left = '0';
@@ -522,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         button.addEventListener('click', () => {
-            location.reload();
+            resetToMenu();
         });
 
         contentDiv.appendChild(title);
@@ -790,6 +903,16 @@ document.addEventListener('DOMContentLoaded', () => {
         createRoomBtn.addEventListener('click', createRoom);
     }
 
+    const botPlayBtn = document.getElementById('botPlayBtn');
+    if (botPlayBtn) {
+        botPlayBtn.addEventListener('click', createBotRoom);
+    }
+
+    const quickPlayBtn = document.getElementById('quickPlayBtn');
+    if (quickPlayBtn) {
+        quickPlayBtn.addEventListener('click', startQuickMatch);
+    }
+
     const backToNameBtn = document.getElementById('backToNameBtn');
     if (backToNameBtn) {
         backToNameBtn.addEventListener('click', () => {
@@ -984,10 +1107,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Room management functions
     function createRoom() {
-        // Skor seçim popup'ını göster
+        pendingBotMode = false;
+        openSettingsPopup();
+    }
+
+    // Single-player: open the same settings popup but reveal the difficulty selector
+    function createBotRoom() {
+        pendingBotMode = true;
+        openSettingsPopup();
+    }
+
+    // Show the settings popup; difficulty selector is only visible in bot mode
+    function openSettingsPopup() {
         const popup = document.getElementById('scoreLimitPopup');
         const mainMenu = document.getElementById('mainMenu');
-        
+        const difficultyGroup = document.getElementById('difficultyGroup');
+
+        if (difficultyGroup) difficultyGroup.style.display = pendingBotMode ? 'block' : 'none';
         if (popup) popup.style.display = 'flex';
         if (mainMenu) mainMenu.style.display = 'none';
     }
@@ -1005,24 +1141,38 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Popup'ı gizle
         popup.style.display = 'none';
-        
-        // Oda oluştur
-        console.log('Creating room with score limit:', selectedScoreLimit, 'and court type:', selectedCourtType);
-        const roomCode = Math.floor(Math.random() * 9000 + 1000).toString();
-        
+
         // Global değişkenleri güncelle
         scoreLimit = selectedScoreLimit;
         courtType = selectedCourtType;
-        
+
         // Socket bağlantısını kontrol et
         if (!socket.connected) {
             console.log('Socket not connected, reconnecting...');
             socket.connect();
         }
-        
-        // Kısa bir gecikme ile oda oluştur
+
+        if (pendingBotMode) {
+            // Tek oyuncu: bot odası iste
+            const difficultySelect = document.getElementById('difficultySelect');
+            const difficulty = difficultySelect ? difficultySelect.value : 'medium';
+            console.log('Creating BOT room, difficulty:', difficulty);
+            setTimeout(() => {
+                socket.emit('createBotRoom', {
+                    playerName: playerName,
+                    scoreLimit: selectedScoreLimit,
+                    courtType: selectedCourtType,
+                    difficulty: difficulty
+                });
+            }, 300);
+            return;
+        }
+
+        // Çok oyuncu: normal oda oluştur
+        console.log('Creating room with score limit:', selectedScoreLimit, 'and court type:', selectedCourtType);
+        const roomCode = Math.floor(Math.random() * 9000 + 1000).toString();
         setTimeout(() => {
-            socket.emit('createRoom', { 
+            socket.emit('createRoom', {
                 roomId: roomCode,
                 playerName: playerName,
                 scoreLimit: selectedScoreLimit,
@@ -1106,6 +1256,14 @@ document.addEventListener('DOMContentLoaded', () => {
         hideOverlay();
     });
 
+    // Server is restarting/shutting down — show a clear message instead of a silent hang.
+    socket.on('serverRestarting', () => {
+        gamePaused = true;
+        if (hasJoinedGame) {
+            showOverlay('Sunucu yeniden başlatılıyor.\nLütfen birazdan tekrar deneyin.');
+        }
+    });
+
     socket.on('connect_error', (error) => {
         console.error('Connection error, Player:', playerNumber, error);
     });
@@ -1139,6 +1297,48 @@ document.addEventListener('DOMContentLoaded', () => {
             waitingRoom.style.display = 'block';
             menu.style.display = 'block';
         }
+    });
+
+    // Single-player: server set up a bot room — skip the waiting room, start at once.
+    socket.on('botGameStart', (data) => {
+        console.log('Bot game starting:', data);
+        roomId = data.roomId;
+        playerNumber = 1;
+        hasJoinedGame = true;
+        gameStarted = false;
+        if (data.scoreLimit) scoreLimit = data.scoreLimit;
+        if (data.courtType) courtType = data.courtType;
+        opponentName = data.botName || 'Bilgisayar';
+
+        // Hide all menus
+        const menu = document.getElementById('menu');
+        const waitingRoom = document.getElementById('waitingRoom');
+        if (waitingRoom) waitingRoom.style.display = 'none';
+        if (menu) menu.style.display = 'none';
+
+        startGame();
+    });
+
+    // Quick-match: server paired us with a random opponent. 'gameStart' follows and
+    // runs the countdown — here we just record who we are and dismiss the search UI.
+    socket.on('searchingMatch', () => {
+        console.log('Searching for opponent...');
+    });
+
+    socket.on('matchFound', (data) => {
+        console.log('Match found:', data);
+        searching = false;
+        hideSearching();
+        roomId = data.roomId;
+        playerNumber = data.playerNumber;
+        opponentName = data.opponentName || 'Rakip';
+        if (data.scoreLimit) scoreLimit = data.scoreLimit;
+        if (data.courtType) courtType = data.courtType;
+        hasJoinedGame = true;
+        gameStarted = false;
+
+        const menu = document.getElementById('menu');
+        if (menu) menu.style.display = 'none';
     });
 
     socket.on('roomJoined', (data) => {
@@ -1206,10 +1406,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showGoalAnimation(); // animasyon + gol sesi + titreşim
     });
 
-    // Server raket-top çarpışması bildirdi
-    socket.on('hit', () => {
-        hitFlashTime = Date.now(); // trigger visual glow on own paddle
+    // Server raket-top çarpışması bildirdi (hangi raketin vurduğu data.player ile gelir)
+    socket.on('hit', (data) => {
+        const who = (data && data.player) ? data.player : playerNumber;
+        hitFlashTime = Date.now();
+        hitFlashPlayer = who;            // o rakette parlama göster
         playHitSound();
-        if ('vibrate' in navigator) navigator.vibrate(40);
+        // Titreşimi sadece kendi raketimiz vurunca hissettir
+        if (who === playerNumber && 'vibrate' in navigator) navigator.vibrate(40);
     });
 }); 
