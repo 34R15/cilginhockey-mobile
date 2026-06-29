@@ -39,14 +39,12 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          echo "$CERT_KEY_B64" | base64 --decode > /tmp/ios_dist_key.pem
+          echo "$CERT_KEY_B64" | base64 --decode > /tmp/ios_dist.p12
+          keychain add-certificates --certificate /tmp/ios_dist.p12
           app-store-connect fetch-signing-files "com.b4ris.cilginhockey" \
             --type IOS_APP_STORE \
-            --certificate-key=@file:/tmp/ios_dist_key.pem \
-            --create \
-            --platform IOS
-          keychain add-certificates
-          xcode-project use-profiles --warn-only
+            --create
+          xcode-project use-profiles
       - name: Build signed .ipa
         script: |
           if [ -f ios/App/App.xcworkspace ]; then
