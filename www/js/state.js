@@ -38,4 +38,7 @@ export const state = {
   // Canvas sizing (updated by Renderer.resize())
   PADDLE_RADIUS: 30,
   PUCK_RADIUS:   15,
+
+  // Active power-up flags (synced from server state broadcasts)
+  powers: { p1Big: false, p2Big: false, p1Frozen: false, p2Frozen: false, speed: false },
 };

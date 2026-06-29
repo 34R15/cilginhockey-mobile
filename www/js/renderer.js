@@ -248,20 +248,34 @@ export class Renderer {
 
   _drawPaddles() {
     const { ctx, state: s } = this;
-    const isP2  = s.playerNumber === 2;
-    const size  = s.PADDLE_RADIUS * 2;
-    const half  = size / 2;
+    const isP2 = s.playerNumber === 2;
+    const pw   = s.powers || {};
 
-    ctx.save();
-    ctx.translate(s.paddle1.x, s.paddle1.y);
-    if (isP2) ctx.rotate(Math.PI);
-    ctx.drawImage(this._paddle1Img, -half, -half, size, size);
-    ctx.restore();
+    // Effective radii (1.9× when big power is active — matches server)
+    const r1 = (pw.p1Big ? 1.9 : 1) * s.PADDLE_RADIUS;
+    const r2 = (pw.p2Big ? 1.9 : 1) * s.PADDLE_RADIUS;
 
+    this._drawOnePaddle(s.paddle1, this._paddle1Img, r1, isP2, pw.p1Frozen, '#818cf8');
+    this._drawOnePaddle(s.paddle2, this._paddle2Img, r2, isP2, pw.p2Frozen, '#818cf8');
+  }
+
+  _drawOnePaddle(pos, img, radius, rotated, frozen, freezeColor) {
+    const { ctx } = this;
+    const size = radius * 2;
     ctx.save();
-    ctx.translate(s.paddle2.x, s.paddle2.y);
-    if (isP2) ctx.rotate(Math.PI);
-    ctx.drawImage(this._paddle2Img, -half, -half, size, size);
+    ctx.translate(pos.x, pos.y);
+    if (rotated) ctx.rotate(Math.PI);
+    ctx.drawImage(img, -radius, -radius, size, size);
+    // Freeze overlay: blue tint ring
+    if (frozen) {
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = freezeColor;
+      ctx.lineWidth   = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
 

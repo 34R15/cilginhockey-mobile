@@ -73,6 +73,10 @@ export class SocketManager {
     this.socket.emit('rejoinRoom', { roomId, playerNumber, playerName });
   }
 
+  usePower(roomId, power) {
+    this.socket.emit('usePower', { roomId, power });
+  }
+
   // ─── Internal binding ──────────────────────────────────────────────────────
 
   _bindAll() {
@@ -100,6 +104,7 @@ export class SocketManager {
     s.on('hit',      (d) => cb.onHit?.(d));
     s.on('gameOver', (d) => cb.onGameOver?.(d));
 
+    s.on('powerActivated',       (d) => cb.onPowerActivated?.(d));
     s.on('opponentDisconnected', () => cb.onOpponentDisconnected?.());
     s.on('opponentReconnected',  () => cb.onOpponentReconnected?.());
     s.on('rejoined',             (d) => cb.onRejoined?.(d));

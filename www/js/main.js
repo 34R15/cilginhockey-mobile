@@ -25,8 +25,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Timers for reconnect countdowns
-  let reconnectTimer    = null;
+  let reconnectTimer      = null;
   let selfDisconnectTimer = null;
+
+  // Power-up FAB — created once, shown/hidden per game session
+  const powerUp = ui.initPowerUpButton((id) => {
+    net.usePower(state.roomId, id);
+  });
 
   // ─── Network ───────────────────────────────────────────────────────────────
 
@@ -133,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (data.score)                    state.score     = data.score;
       if (data.puckSpeed !== undefined)  state.puckSpeed = data.puckSpeed;
+      if (data.powers)                   state.powers    = data.powers;
     },
 
     onGoal(data) {
@@ -173,6 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data?.courtType)  state.courtType  = data.courtType;
       state.gamePaused = false;
       ui.hideReconnect();
+    },
+
+    onPowerActivated(data) {
+      const labels = { speed: '⚡ Turbo!', big: '🛡 Dev Raket!', freeze: '❄ Dondur!' };
+      const isOwn  = data.player === state.playerNumber;
+      const msg    = isOwn ? labels[data.power] : (data.power === 'freeze' ? '❄ Donduruldun!' : null);
+      if (msg) _showPowerToast(msg);
     },
 
     onServerRestarting() {
@@ -260,6 +273,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ─── Game flow ─────────────────────────────────────────────────────────────
 
+  function _showPowerToast(msg) {
+    let el = document.getElementById('powerToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'powerToast';
+      el.style.cssText =
+        'position:fixed;bottom:100px;right:16px;padding:10px 18px;border-radius:20px;' +
+        'background:rgba(15,15,30,0.92);border:1.5px solid rgba(255,255,255,0.2);' +
+        'color:#fff;font-size:15px;font-weight:700;font-family:\'Montserrat\',sans-serif;' +
+        'z-index:1300;opacity:0;transition:opacity 0.2s;pointer-events:none;' +
+        'backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+  }
+
   function _startGame() {
     renderer.initPositions();
     state.gameStarted = false;
@@ -271,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
       canvas.style.display = 'block';
       renderer.resize();
       input.attach();
+      powerUp.show();
       net.playerReady(state.roomId);
     });
   }
@@ -310,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.puckSpeed     = 0;
     state.hitFlashTime  = 0;
 
+    powerUp.hide();
     canvas.style.display = 'none';
     const goalAnim = document.getElementById('goalAnimation');
     if (goalAnim) { goalAnim.style.display = 'none'; goalAnim.classList.remove('show'); }

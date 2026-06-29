@@ -223,4 +223,181 @@ export class UI {
     show(0);
     setTimeout(next, 1100);
   }
+
+  // ─── 6. Power-up FAB ───────────────────────────────────────────────────────
+
+  /**
+   * Creates the power-up FAB in the bottom-right corner.
+   * Call once when gameplay begins; use show/hide to toggle visibility.
+   * @param {function} onSelect - called with power id: 'speed' | 'big' | 'freeze'
+   * @returns {{ show, hide, destroy }} controls
+   */
+  initPowerUpButton(onSelect) {
+    // Remove any previous instance
+    document.getElementById('powerupFab')?.remove();
+    document.getElementById('powerupStyle')?.remove();
+
+    const POWERS = [
+      {
+        id: 'speed', label: 'Turbo', color: '#facc15', shadow: 'rgba(250,204,21,0.55)',
+        svg: `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`,
+      },
+      {
+        id: 'big', label: 'Dev Raket', color: '#22d3ee', shadow: 'rgba(34,211,238,0.55)',
+        svg: `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5z"/></svg>`,
+      },
+      {
+        id: 'freeze', label: 'Dondur', color: '#818cf8', shadow: 'rgba(129,140,248,0.55)',
+        svg: `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M22 11h-4.17l2.24-2.24-1.41-1.42L15 11h-2V9l3.66-3.66-1.42-1.41L13 5.83V2h-2v3.83L8.76 3.93 7.34 5.34 11 9v2H9L5.34 7.34 3.93 8.76 6.17 11H2v2h4.17l-2.24 2.24 1.41 1.42L9 13h2v2l-3.66 3.66 1.42 1.41L11 18.17V22h2v-3.83l2.24 2.24 1.42-1.41L13 15v-2h2l3.66 3.66 1.41-1.42L17.83 13H22z"/></svg>`,
+      },
+    ];
+
+    // Fan target positions relative to the main button (opens up-left arc)
+    const FAN = [
+      { x: 0,    y: -96 },   // straight up
+      { x: -68,  y: -68 },   // diagonal
+      { x: -96,  y: 0   },   // straight left
+    ];
+
+    // Inject keyframes + base styles once
+    const style = document.createElement('style');
+    style.id = 'powerupStyle';
+    style.textContent = `
+      #powerupFab { position:fixed; bottom:24px; right:24px; width:58px; height:58px;
+        display:none; align-items:center; justify-content:center; z-index:1200; }
+      .pu-main {
+        width:58px; height:58px; border-radius:50%; border:none; cursor:pointer;
+        background: rgba(15,15,30,0.85);
+        border: 2px solid rgba(255,255,255,0.18);
+        box-shadow: 0 0 18px rgba(34,211,238,0.35), 0 4px 16px rgba(0,0,0,0.5);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: #22d3ee; display:flex; align-items:center; justify-content:center;
+        transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+                    box-shadow 0.2s, border-color 0.2s;
+        position: relative; z-index: 2;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pu-main.open {
+        transform: rotate(45deg);
+        border-color: rgba(34,211,238,0.5);
+        box-shadow: 0 0 28px rgba(34,211,238,0.6), 0 4px 20px rgba(0,0,0,0.6);
+      }
+      .pu-item {
+        position: absolute; bottom: 0; right: 0;
+        width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer;
+        background: rgba(15,15,30,0.9);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 2px solid rgba(255,255,255,0.12);
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: 1px;
+        opacity: 0; transform: scale(0);
+        transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
+                    box-shadow 0.2s;
+        pointer-events: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pu-item.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+      .pu-item:active { transform: scale(0.9) !important; }
+      .pu-label {
+        font-size: 8px; font-weight: 700; letter-spacing: 0.3px;
+        font-family: 'Montserrat', sans-serif; color: #fff; opacity: 0.85;
+        text-transform: uppercase; line-height: 1;
+      }
+      @keyframes puPulse {
+        0%,100% { box-shadow: 0 0 18px rgba(34,211,238,0.35), 0 4px 16px rgba(0,0,0,0.5); }
+        50%      { box-shadow: 0 0 28px rgba(34,211,238,0.6),  0 4px 20px rgba(0,0,0,0.6); }
+      }
+      .pu-main:not(.open) { animation: puPulse 2.4s ease-in-out infinite; }
+    `;
+    document.head.appendChild(style);
+
+    // Container
+    const container = document.createElement('div');
+    container.id = 'powerupFab';
+
+    // Sub-items
+    POWERS.forEach((p, i) => {
+      const item = document.createElement('button');
+      item.className = 'pu-item';
+      item.dataset.id = p.id;
+      item.style.color = p.color;
+      item.style.borderColor = `rgba(${_hexToRgb(p.color)},0.4)`;
+      item.innerHTML = p.svg + `<span class="pu-label">${p.label}</span>`;
+
+      // Position: start at center, animate to fan position
+      item.style.bottom  = `${4 - FAN[i].y}px`;  // negative y = up
+      item.style.right   = `${4 - FAN[i].x}px`;  // negative x = left
+      item.style.transitionDelay = `${i * 40}ms`;
+
+      // stopPropagation on both click AND touchstart so document listeners don't fire
+      const _stopProp = (e) => e.stopPropagation();
+      item.addEventListener('touchstart', _stopProp, { passive: false });
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _closeMenu();
+        // Remove this power-up from DOM — one-time use
+        item.classList.remove('visible');
+        setTimeout(() => item.remove(), 300); // wait for fade-out transition
+        onSelect?.(p.id);
+        // Brief glow feedback on the main button
+        mainBtn.style.boxShadow = `0 0 32px ${p.shadow}, 0 4px 20px rgba(0,0,0,0.6)`;
+        setTimeout(() => { mainBtn.style.boxShadow = ''; }, 600);
+      });
+
+      container.appendChild(item);
+    });
+
+    // Main FAB — the ⚡ toggle
+    const mainBtn = document.createElement('button');
+    mainBtn.className = 'pu-main';
+    mainBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`;
+    mainBtn.setAttribute('aria-label', 'Özel Güçler');
+
+    let open = false;
+    const items = () => container.querySelectorAll('.pu-item');
+
+    const _openMenu = () => {
+      open = true;
+      mainBtn.classList.add('open');
+      items().forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 40);
+      });
+    };
+    const _closeMenu = () => {
+      open = false;
+      mainBtn.classList.remove('open');
+      items().forEach(el => el.classList.remove('visible'));
+    };
+
+    // stopPropagation on touchstart so the document touchstart listener doesn't
+    // fire and immediately close the menu right after the main button opens it.
+    mainBtn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
+    mainBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      open ? _closeMenu() : _openMenu();
+    });
+
+    // Tap anywhere else closes the menu
+    document.addEventListener('click', _closeMenu);
+    document.addEventListener('touchstart', _closeMenu, { passive: true });
+
+    container.appendChild(mainBtn);
+    document.body.appendChild(container);
+
+    return {
+      show:    () => { container.style.display = 'flex'; },
+      hide:    () => { _closeMenu(); container.style.display = 'none'; },
+      destroy: () => { _closeMenu(); container.remove(); style.remove();
+                       document.removeEventListener('click', _closeMenu);
+                       document.removeEventListener('touchstart', _closeMenu); },
+    };
+  }
+}
+
+// ── internal helper ────────────────────────────────────────────────────────────
+function _hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
 }
