@@ -10,6 +10,7 @@ import { InputHandler } from './input.js';
 import { UI }           from './ui.js';
 import { LobbyManager } from './lobby.js';
 import { SocketManager } from './network.js';
+import { Onboarding }   from './onboarding.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -260,6 +261,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   lobby.init();
+
+  // ─── First-launch onboarding ───────────────────────────────────────────────
+  // Shows once over the name form; the gate (localStorage) skips it afterwards.
+  if (!Onboarding.seen()) {
+    new Onboarding(() => { /* name form is already visible underneath */ });
+  }
 
   // ─── Sound unlock on canvas interaction ────────────────────────────────────
 
