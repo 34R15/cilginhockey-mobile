@@ -88,7 +88,7 @@ function freshPhysics() {
         p2: { x: FIELD_W / 2, y: PADDLE_R * 2, lastX: FIELD_W / 2, lastY: PADDLE_R * 2 },
         score: { player1: 0, player2: 0 },
         // Power-up state: epoch ms when each effect expires (0 = inactive)
-        powers: { speedUntil: 0, p1BigUntil: 0, p2BigUntil: 0, p1FreezeUntil: 0, p2FreezeUntil: 0 }
+        powers: { speedUntil: 0, p1BigUntil: 0, p2BigUntil: 0, p1FreezeUntil: 0, p2FreezeUntil: 0, p1SmallGoalUntil: 0, p2SmallGoalUntil: 0 }
     };
 }
 
@@ -256,11 +256,13 @@ function broadcastState(room) {
         score: p.score,
         puckSpeed: Math.hypot(p.puck.vx, p.puck.vy) / MAX_PUCK_SPEED,
         powers: {
-            p1Big:    now < pw.p1BigUntil,
-            p2Big:    now < pw.p2BigUntil,
-            p1Frozen: now < pw.p1FreezeUntil,
-            p2Frozen: now < pw.p2FreezeUntil,
-            speed:    now < pw.speedUntil,
+            p1Big:         now < pw.p1BigUntil,
+            p2Big:         now < pw.p2BigUntil,
+            p1Frozen:      now < pw.p1FreezeUntil,
+            p2Frozen:      now < pw.p2FreezeUntil,
+            speed:         now < pw.speedUntil,
+            p1SmallGoal:   now < pw.p1SmallGoalUntil,
+            p2SmallGoal:   now < pw.p2SmallGoalUntil,
         }
     });
 }
@@ -268,9 +270,22 @@ function broadcastState(room) {
 function stepRoom(room) {
     const p = room.phys;
     const puck = p.puck;
-    const goalW = FIELD_W * GOAL_WIDTH_RATIO;
-    const goalStart = (FIELD_W - goalW) / 2;
-    const goalEnd = goalStart + goalW;
+    const now2 = Date.now();
+    const pw2  = p.powers;
+
+    // Goal widths — shrink OWN goal if smallGoal power is active (defensive).
+    // p1 uses power → p1's own goal (bottom) shrinks; p2 uses power → p2's own goal (top) shrinks.
+    const SMALL_RATIO = 0.32;
+    const p1GoalRatio = now2 < pw2.p1SmallGoalUntil ? SMALL_RATIO : GOAL_WIDTH_RATIO;
+    const p2GoalRatio = now2 < pw2.p2SmallGoalUntil ? SMALL_RATIO : GOAL_WIDTH_RATIO;
+
+    const goalWBottom = FIELD_W * p1GoalRatio;
+    const goalStartBottom = (FIELD_W - goalWBottom) / 2;
+    const goalEndBottom   = goalStartBottom + goalWBottom;
+
+    const goalWTop = FIELD_W * p2GoalRatio;
+    const goalStartTop = (FIELD_W - goalWTop) / 2;
+    const goalEndTop   = goalStartTop + goalWTop;
 
     // Integrate
     puck.x += puck.vx;
@@ -313,14 +328,14 @@ function stepRoom(room) {
     if (puck.x - PUCK_R < 0) { puck.x = PUCK_R; puck.vx = Math.abs(puck.vx) * 0.9; }
     if (puck.x + PUCK_R > FIELD_W) { puck.x = FIELD_W - PUCK_R; puck.vx = -Math.abs(puck.vx) * 0.9; }
 
-    // Top: goal if within mouth, else wall bounce
+    // Top: goal (player 1 scores) if within p2's goal mouth, else wall bounce
     if (puck.y - PUCK_R < 0) {
-        if (puck.x > goalStart && puck.x < goalEnd) { scoreGoal(room, 1); return; }
+        if (puck.x > goalStartTop && puck.x < goalEndTop) { scoreGoal(room, 1); return; }
         puck.y = PUCK_R; puck.vy = Math.abs(puck.vy) * 0.9;
     }
-    // Bottom: goal if within mouth, else wall bounce
+    // Bottom: goal (player 2 scores) if within p1's goal mouth, else wall bounce
     if (puck.y + PUCK_R > FIELD_H) {
-        if (puck.x > goalStart && puck.x < goalEnd) { scoreGoal(room, 2); return; }
+        if (puck.x > goalStartBottom && puck.x < goalEndBottom) { scoreGoal(room, 2); return; }
         puck.y = FIELD_H - PUCK_R; puck.vy = -Math.abs(puck.vy) * 0.9;
     }
 
@@ -334,8 +349,21 @@ function scoreGoal(room, scorer) {
 
     io.to(room.id).emit('goal', { scorer, score: p.score });
 
-    if (p.score.player1 >= room.scoreLimit || p.score.player2 >= room.scoreLimit) {
-        const winner = p.score.player1 > p.score.player2 ? 1 : 2;
+    const s1 = p.score.player1, s2 = p.score.player2;
+    const inOT = s1 >= room.scoreLimit && s2 >= room.scoreLimit;
+    // Overtime (deuce): both reached scoreLimit — need 2-goal lead to win
+    const winnerOT = inOT && Math.abs(s1 - s2) >= 2 ? (s1 > s2 ? 1 : 2) : null;
+    // Normal win: one player reached scoreLimit and other hasn't (or gap already 2+)
+    const winnerNormal = (!inOT && (s1 >= room.scoreLimit || s2 >= room.scoreLimit)) ? (s1 > s2 ? 1 : 2) : null;
+    const winner = winnerOT ?? winnerNormal;
+
+    // Emit overtime start when both first reach scoreLimit (deuce moment)
+    if (inOT && !room.inOT) {
+        room.inOT = true;
+        io.to(room.id).emit('overtime', { score: p.score });
+    }
+
+    if (winner) {
         room.gameOver = true;
         stopLoop(room);
         io.to(room.id).emit('gameOver', { winner });
@@ -603,7 +631,7 @@ io.on('connection', (socket) => {
     socket.on('usePower', (data) => {
         const { power } = data || {};
         const room = data && getMemberRoom(socket, data.roomId);
-        if (!room || !['speed', 'big', 'freeze'].includes(power)) return;
+        if (!room || !['speed', 'big', 'freeze', 'smallGoal'].includes(power)) return;
 
         const player = socket.id === room.host ? 1 : 2;
         const key    = `p${player}:${power}`;
@@ -631,6 +659,10 @@ io.on('connection', (socket) => {
             // Freeze the OPPONENT
             if (player === 1) pw.p2FreezeUntil = now + 3000;
             else              pw.p1FreezeUntil = now + 3000;
+        } else if (power === 'smallGoal') {
+            // Shrink OWN goal for 6 s (defensive)
+            if (player === 1) pw.p1SmallGoalUntil = now + 6000;
+            else              pw.p2SmallGoalUntil = now + 6000;
         }
 
         io.to(room.id).emit('powerActivated', { player, power });

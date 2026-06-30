@@ -23,6 +23,7 @@ export class Renderer {
     this._puckImg.src    = 'assets/images/disk.png';
 
     this._rafId = null;
+    this._trail = []; // puck position history for trail effect
   }
 
   // ─── Coordinate helpers ────────────────────────────────────────────────────
@@ -123,6 +124,8 @@ export class Renderer {
     this._drawScores();
     this._drawHitFlash();
     this._drawPaddles();
+    this._updateTrail();
+    this._drawTrail();
     this._drawPuck();
 
     ctx.restore();
@@ -140,38 +143,54 @@ export class Renderer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const gw    = canvas.width * GOAL_WIDTH_RATIO;
-    const gs    = (canvas.width - gw) / 2;
+    const pw    = s.powers || {};
+    const SMALL = 0.32;
     const thick = 5;
+
+    // Per-goal width: shrink OWN goal when smallGoal is active (defensive power).
+    // Player 1 is at bottom → p1SmallGoal shrinks the bottom goal.
+    // Player 2 is at top    → p2SmallGoal shrinks the top goal.
+    const topRatio    = pw.p2SmallGoal ? SMALL : GOAL_WIDTH_RATIO;
+    const bottomRatio = pw.p1SmallGoal ? SMALL : GOAL_WIDTH_RATIO;
+
+    const gwTop = canvas.width * topRatio;
+    const gsTop = (canvas.width - gwTop) / 2;
+    const gwBot = canvas.width * bottomRatio;
+    const gsBot = (canvas.width - gwBot) / 2;
+
+    const topSmall    = pw.p2SmallGoal;
+    const bottomSmall = pw.p1SmallGoal;
 
     // Top goal
     ctx.fillStyle = '#333';
     ctx.fillRect(0, 0, canvas.width, thick);
-    ctx.fillRect(0, 0, gs, 20);
-    ctx.fillRect(gs + gw, 0, gs, 20);
+    ctx.fillRect(0, 0, gsTop, 20);
+    ctx.fillRect(gsTop + gwTop, 0, canvas.width - gsTop - gwTop, 20);
 
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = topSmall ? '#f43f5e' : '#fff';
     ctx.lineWidth = thick;
     ctx.beginPath();
-    ctx.moveTo(gs, 0);       ctx.lineTo(gs, 20);
-    ctx.moveTo(gs + gw, 0);  ctx.lineTo(gs + gw, 20);
+    ctx.moveTo(gsTop, 0);            ctx.lineTo(gsTop, 20);
+    ctx.moveTo(gsTop + gwTop, 0);    ctx.lineTo(gsTop + gwTop, 20);
     ctx.stroke();
 
     // Bottom goal
     ctx.fillStyle = '#333';
     ctx.fillRect(0, canvas.height - thick, canvas.width, thick);
-    ctx.fillRect(0, canvas.height - 20, gs, 20);
-    ctx.fillRect(gs + gw, canvas.height - 20, gs, 20);
+    ctx.fillRect(0, canvas.height - 20, gsBot, 20);
+    ctx.fillRect(gsBot + gwBot, canvas.height - 20, canvas.width - gsBot - gwBot, 20);
 
+    ctx.strokeStyle = bottomSmall ? '#f43f5e' : '#fff';
     ctx.beginPath();
-    ctx.moveTo(gs, canvas.height);       ctx.lineTo(gs, canvas.height - 20);
-    ctx.moveTo(gs + gw, canvas.height);  ctx.lineTo(gs + gw, canvas.height - 20);
+    ctx.moveTo(gsBot, canvas.height);         ctx.lineTo(gsBot, canvas.height - 20);
+    ctx.moveTo(gsBot + gwBot, canvas.height); ctx.lineTo(gsBot + gwBot, canvas.height - 20);
     ctx.stroke();
 
     // Semi-transparent goal area fills
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(gs, 0, gw, 20);
-    ctx.fillRect(gs, canvas.height - 20, gw, 20);
+    ctx.fillStyle = topSmall    ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.1)';
+    ctx.fillRect(gsTop, 0, gwTop, 20);
+    ctx.fillStyle = bottomSmall ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.1)';
+    ctx.fillRect(gsBot, canvas.height - 20, gwBot, 20);
   }
 
   _drawNames() {
@@ -277,6 +296,42 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
     ctx.restore();
+  }
+
+  _updateTrail() {
+    const s = this.state;
+    if (!s.gameStarted) { this._trail = []; return; }
+    this._trail.push({ x: s.puck.x, y: s.puck.y, speed: s.puckSpeed || 0 });
+    if (this._trail.length > 10) this._trail.shift();
+  }
+
+  _drawTrail() {
+    const { ctx, state: s } = this;
+    const trail = this._trail;
+    if (trail.length < 2) return;
+
+    const isTurbo = s.powers?.speed;
+    const len = trail.length;
+
+    for (let i = 0; i < len - 1; i++) {
+      const t      = i / (len - 1);          // 0 = oldest, 1 = newest
+      const pt     = trail[i];
+      const speed  = pt.speed;
+      if (speed < 0.15) continue;            // no trail at low speed
+
+      const opacity = t * t * (isTurbo ? 0.75 : 0.45);
+      const radius  = s.PUCK_RADIUS * (0.25 + t * 0.55);
+
+      // Color: cyan for turbo, orange-red for normal
+      const r = isTurbo ? 34  : 255;
+      const g = isTurbo ? 211 : Math.round(80 * (1 - t));
+      const b = isTurbo ? 238 : 0;
+
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${opacity.toFixed(2)})`;
+      ctx.fill();
+    }
   }
 
   _drawPuck() {

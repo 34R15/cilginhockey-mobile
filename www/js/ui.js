@@ -237,7 +237,185 @@ export class UI {
     setTimeout(next, 1100);
   }
 
-  // ─── 6. Power-up FAB ───────────────────────────────────────────────────────
+  // ─── 6. Active power countdown ring ───────────────────────────────────────
+
+  /**
+   * Shows a small circular countdown ring near the FAB for durationMs.
+   * One ring per call; a new call replaces the previous one.
+   */
+  showPowerCountdown(powerId, durationMs) {
+    // Power label + color map
+    const META = {
+      speed:     { label: '⚡', color: '#facc15' },
+      big:       { label: '🛡', color: '#22d3ee' },
+      freeze:    { label: '❄',  color: '#818cf8' },
+      smallGoal: { label: '🥅', color: '#fb923c' },
+    };
+    const m = META[powerId] || { label: '✨', color: '#fff' };
+
+    let wrap = document.getElementById('powerCountdownWrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'powerCountdownWrap';
+      wrap.style.cssText =
+        'position:fixed;bottom:96px;left:16px;z-index:1250;' +
+        'display:flex;flex-direction:column;align-items:center;gap:4px;' +
+        'pointer-events:none;';
+      document.body.appendChild(wrap);
+    }
+
+    const SIZE = 48, R = 20, CIRC = 2 * Math.PI * R;
+    wrap.innerHTML = `
+      <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}" style="transform:rotate(-90deg)">
+        <circle cx="24" cy="24" r="${R}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/>
+        <circle id="pcRing" cx="24" cy="24" r="${R}" fill="none"
+          stroke="${m.color}" stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="${CIRC}" stroke-dashoffset="0"
+          style="transition:stroke-dashoffset linear ${durationMs}ms"/>
+      </svg>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-58%);
+        font-size:18px;line-height:1;">${m.label}</div>
+    `;
+
+    // Trigger animation on next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const ring = document.getElementById('pcRing');
+        if (ring) ring.style.strokeDashoffset = `${CIRC}`;
+      });
+    });
+
+    clearTimeout(this._pcTimer);
+    this._pcTimer = setTimeout(() => {
+      wrap.style.opacity = '0';
+      wrap.style.transition = 'opacity 0.3s';
+      setTimeout(() => { wrap.remove(); }, 300);
+    }, durationMs);
+
+    wrap.style.opacity = '1';
+    wrap.style.transition = 'none';
+  }
+
+  // ─── 7. Match point warning ────────────────────────────────────────────────
+
+  showMatchPoint() {
+    // Edge pulse overlay
+    let el = document.getElementById('matchPointOverlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'matchPointOverlay';
+      el.style.cssText =
+        'position:fixed;inset:0;z-index:1400;pointer-events:none;' +
+        'display:flex;align-items:center;justify-content:center;';
+      document.body.appendChild(el);
+    }
+
+    el.innerHTML = `
+      <div id="mpEdge" style="position:absolute;inset:0;
+        box-shadow:inset 0 0 60px 20px rgba(244,63,94,0.55);
+        animation:mpPulse 0.8s ease-in-out 3;"></div>
+      <div id="mpText" style="
+        font-family:'Orbitron',sans-serif;font-weight:900;font-size:28px;
+        color:#f43f5e;letter-spacing:2px;text-align:center;
+        text-shadow:0 0 30px rgba(244,63,94,0.9),0 0 60px rgba(244,63,94,0.5);
+        animation:mpTextPop 0.45s cubic-bezier(0.34,1.56,0.64,1) both;">
+        MAÇ TOPU
+      </div>
+    `;
+
+    if (!document.getElementById('mpStyle')) {
+      const st = document.createElement('style');
+      st.id = 'mpStyle';
+      st.textContent = `
+        @keyframes mpPulse {
+          0%,100% { opacity:0; } 50% { opacity:1; }
+        }
+        @keyframes mpTextPop {
+          from { opacity:0; transform:scale(0.6); }
+          to   { opacity:1; transform:scale(1); }
+        }
+      `;
+      document.head.appendChild(st);
+    }
+
+    el.style.display = 'flex';
+    clearTimeout(this._mpTimer);
+    this._mpTimer = setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.5s';
+      setTimeout(() => { el.style.display = 'none'; el.style.opacity = '1'; el.style.transition = ''; }, 500);
+    }, 2200);
+  }
+
+  hideMatchPoint() {
+    const el = document.getElementById('matchPointOverlay');
+    if (el) el.style.display = 'none';
+  }
+
+  // ─── 8. Overtime announcement ─────────────────────────────────────────────
+
+  showOvertime() {
+    // Remove any existing
+    document.getElementById('overtimeBanner')?.remove();
+
+    if (!document.getElementById('otAnimStyle')) {
+      const st = document.createElement('style');
+      st.id = 'otAnimStyle';
+      st.textContent = `
+        @keyframes otSlideIn {
+          from { transform: translateY(-120%) scale(0.85); opacity: 0; }
+          to   { transform: translateY(0)        scale(1);    opacity: 1; }
+        }
+        @keyframes otPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(251,146,60,0); }
+          50%      { box-shadow: 0 0 0 16px rgba(251,146,60,0.35); }
+        }
+        @keyframes otShimmer {
+          0%,100% { opacity: 1; }
+          50%      { opacity: 0.65; }
+        }
+      `;
+      document.head.appendChild(st);
+    }
+
+    const wrap = document.createElement('div');
+    wrap.id = 'overtimeBanner';
+    wrap.style.cssText =
+      'position:fixed;top:0;left:0;right:0;z-index:1400;display:flex;' +
+      'align-items:center;justify-content:center;padding:' +
+      'max(52px,env(safe-area-inset-top)) 20px 0;pointer-events:none;';
+
+    const card = document.createElement('div');
+    card.style.cssText =
+      'display:flex;flex-direction:column;align-items:center;gap:4px;' +
+      'padding:14px 32px 16px;border-radius:20px;' +
+      'background:linear-gradient(135deg,rgba(251,146,60,0.18) 0%,rgba(244,63,94,0.18) 100%);' +
+      'border:1.5px solid rgba(251,146,60,0.55);' +
+      'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);' +
+      'box-shadow:0 12px 36px rgba(0,0,0,0.5);' +
+      'animation:otSlideIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both,otPulse 2s ease 0.6s infinite;';
+
+    card.innerHTML =
+      '<div style="font-family:\'Orbitron\',sans-serif;font-size:22px;font-weight:900;' +
+      'letter-spacing:2px;color:#fb923c;text-shadow:0 0 20px rgba(251,146,60,0.8),' +
+      '0 0 40px rgba(251,146,60,0.4);animation:otShimmer 1.6s ease infinite;">UZATMA</div>' +
+      '<div style="font-family:\'Montserrat\',sans-serif;font-size:12px;font-weight:600;' +
+      'color:rgba(255,255,255,0.75);letter-spacing:0.5px;">2 fark için oyna</div>';
+
+    wrap.appendChild(card);
+    document.body.appendChild(wrap);
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+      if (wrap.parentNode) {
+        wrap.style.transition = 'opacity 0.4s';
+        wrap.style.opacity = '0';
+        setTimeout(() => wrap.remove(), 420);
+      }
+    }, 4000);
+  }
+
+  // ─── 9. Power-up FAB ───────────────────────────────────────────────────────
 
   /**
    * Creates the power-up FAB in the bottom-right corner.
@@ -263,14 +441,19 @@ export class UI {
         id: 'freeze', label: 'Dondur', color: '#818cf8', shadow: 'rgba(129,140,248,0.55)',
         svg: `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M22 11h-4.17l2.24-2.24-1.41-1.42L15 11h-2V9l3.66-3.66-1.42-1.41L13 5.83V2h-2v3.83L8.76 3.93 7.34 5.34 11 9v2H9L5.34 7.34 3.93 8.76 6.17 11H2v2h4.17l-2.24 2.24 1.41 1.42L9 13h2v2l-3.66 3.66 1.42 1.41L11 18.17V22h2v-3.83l2.24 2.24 1.42-1.41L13 15v-2h2l3.66 3.66 1.41-1.42L17.83 13H22z"/></svg>`,
       },
+      {
+        id: 'smallGoal', label: 'Kale Küçült', color: '#fb923c', shadow: 'rgba(251,146,60,0.55)',
+        svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M4 20v-8h16v8"/><path d="M8 12V6h8v6"/><line x1="12" y1="6" x2="12" y2="20"/></svg>`,
+      },
     ];
 
-    // Fan target positions relative to the main button (opens up-right arc,
-    // since the FAB now sits in the bottom-left corner)
+    // Fan layout: first 3 powers in the original arc (up → diagonal → right),
+    // 4th power (smallGoal) sits above the arc group — visually separated.
     const FAN = [
-      { x: 0,   y: -96 },   // straight up
-      { x: 68,  y: -68 },   // diagonal
-      { x: 96,  y: 0   },   // straight right
+      { x: 0,   y: -96  },   // straight up   (Turbo)
+      { x: 68,  y: -68  },   // diagonal      (Dev Raket)
+      { x: 96,  y: 0    },   // straight right (Dondur)
+      { x: 0,   y: -172 },   // above group   (Kale Küçült)
     ];
 
     // Inject keyframes + base styles once

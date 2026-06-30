@@ -104,6 +104,7 @@ export class SocketManager {
     s.on('hit',      (d) => cb.onHit?.(d));
     s.on('gameOver', (d) => cb.onGameOver?.(d));
 
+    s.on('overtime',             (d) => cb.onOvertime?.(d));
     s.on('powerActivated',       (d) => cb.onPowerActivated?.(d));
     s.on('opponentDisconnected', () => cb.onOpponentDisconnected?.());
     s.on('opponentReconnected',  () => cb.onOpponentReconnected?.());

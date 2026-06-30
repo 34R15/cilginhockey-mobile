@@ -148,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ui.showGoalAnimation();
       sound.playGoal();
       haptic.notification('Success');
+      ui.hideMatchPoint();
+      _checkMatchPoint();
     },
 
     onHit(data) {
@@ -185,15 +187,24 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     onPowerActivated(data) {
-      const labels = { speed: '⚡ Turbo!', big: '🛡 Dev Raket!', freeze: '❄ Dondur!' };
+      const labels = { speed: '⚡ Turbo!', big: '🛡 Dev Raket!', freeze: '❄ Dondur!', smallGoal: '🥅 Kalen Küçüldü!' };
+      const oppLabels = { freeze: '❄ Donduruldun!', smallGoal: '🥅 Rakibin Kalesi Küçüldü!' };
       const isOwn  = data.player === state.playerNumber;
-      const msg    = isOwn ? labels[data.power] : (data.power === 'freeze' ? '❄ Donduruldun!' : null);
+      const msg    = isOwn ? labels[data.power] : (oppLabels[data.power] ?? null);
       if (msg) _showPowerToast(msg);
-      // Sound + haptic for the activating player
       if (isOwn) {
         sound.playPower();
         haptic.impact('Medium');
+        // Show countdown ring for own powers
+        const durations = { speed: 5000, big: 5000, freeze: 3000, smallGoal: 6000 };
+        if (durations[data.power]) ui.showPowerCountdown(data.power, durations[data.power]);
       }
+    },
+
+    onOvertime() {
+      state.inOvertime = true;
+      ui.showOvertime();
+      ui.hideMatchPoint(); // clear any match point warning
     },
 
     onServerRestarting() {
@@ -306,6 +317,23 @@ document.addEventListener('DOMContentLoaded', () => {
     el._t = setTimeout(() => { el.style.opacity = '0'; }, 1800);
   }
 
+  function _checkMatchPoint() {
+    const { score, scoreLimit, playerNumber, inOvertime } = state;
+    if (!scoreLimit) return;
+    if (inOvertime) {
+      // In overtime: show match point when one player leads by 1
+      const diff = Math.abs(score.player1 - score.player2);
+      if (diff === 1) ui.showMatchPoint();
+      else ui.hideMatchPoint();
+      return;
+    }
+    const myS  = playerNumber === 1 ? score.player1 : score.player2;
+    const oppS = playerNumber === 1 ? score.player2 : score.player1;
+    if (myS === scoreLimit - 1 || oppS === scoreLimit - 1) {
+      ui.showMatchPoint();
+    }
+  }
+
   function _startGame() {
     renderer.initPositions();
     state.gameStarted = false;
@@ -356,8 +384,11 @@ document.addEventListener('DOMContentLoaded', () => {
     state.opponentName  = 'Bekleniyor...';
     state.puckSpeed     = 0;
     state.hitFlashTime  = 0;
+    state.inOvertime    = false;
 
     powerUp.hide();
+    ui.hideMatchPoint();
+    document.getElementById('powerCountdownWrap')?.remove();
     canvas.style.display = 'none';
     const goalAnim = document.getElementById('goalAnimation');
     if (goalAnim) { goalAnim.style.display = 'none'; goalAnim.classList.remove('show'); }
