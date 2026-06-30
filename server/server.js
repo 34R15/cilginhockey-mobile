@@ -354,11 +354,14 @@ function scoreGoal(room, scorer) {
     const inOT = s1 >= room.scoreLimit - 1 && s2 >= room.scoreLimit - 1;
     const winnerOT     = inOT  && Math.abs(s1 - s2) >= 2 ? (s1 > s2 ? 1 : 2) : null;
     const winnerNormal = !inOT && (s1 >= room.scoreLimit || s2 >= room.scoreLimit) ? (s1 > s2 ? 1 : 2) : null;
-    const winner = winnerOT ?? winnerNormal;
+    const winner = winnerOT !== null ? winnerOT : winnerNormal;
 
-    // Emit overtime start at the deuce moment (first time both reach scoreLimit-1 tied)
-    if (inOT && s1 === s2 && !room.inOT) {
+    log(`OT check: score=${s1}-${s2} limit=${room.scoreLimit} inOT=${inOT} winnerOT=${winnerOT} winnerNormal=${winnerNormal} winner=${winner} room.inOT=${room.inOT}`);
+
+    // Emit overtime every time the score is tied while in OT (4-4, 5-5, 6-6, ...)
+    if (inOT && s1 === s2) {
         room.inOT = true;
+        log(`OVERTIME emitted for room ${room.id} at ${s1}-${s2}`);
         io.to(room.id).emit('overtime', { score: p.score });
     }
 
