@@ -2,19 +2,21 @@
 
 /* ── Game-over dialog ─────────────────────────────────────────────── */
 #gameOverDialog {
-    position: fixed; inset: 0; z-index: 2500;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    z-index: 2500;
     display: flex; align-items: center; justify-content: center;
     padding: 24px; box-sizing: border-box;
+    background: rgba(8,8,22,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     animation: fadeIn 0.3s ease both;
 }
 #gameOverDialog.go-exit { animation: fadeOut 0.28s ease both; }
 
-.go-backdrop {
-    position: absolute; inset: 0;
-    background: rgba(8,8,22,0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-}
+/* backdrop is now the dialog itself — this div is no longer needed */
+.go-backdrop { display: none; }
 
 .go-card {
     position: relative;
