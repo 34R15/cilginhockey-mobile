@@ -43,11 +43,11 @@
 .popup-content .btn-cta { margin-top: 8px; }
 
 /* ── Gear button in main menu ─────────────────────────────────────── */
-#mainMenu { position: relative; }
+#menu { position: relative; }
 
 .settings-fab {
     position: absolute;
-    top: -8px; right: -8px;
+    top: 14px; right: 14px;
     width: 38px; height: 38px;
     border-radius: 50%;
     border: 1px solid var(--stroke-soft);
@@ -61,6 +61,21 @@
 .settings-fab:hover,
 .settings-fab:active { color: var(--neon-cyan); background: rgba(34,211,238,0.1); }
 .settings-fab.spinning { transform: rotate(180deg); }
+
+/* App settings popup — same full-screen overlay pattern as #scoreLimitPopup */
+#appSettingsPopup {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: rgba(8, 8, 22, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: fadeIn 0.3s ease both;
+}
 
 /* ── App settings rows + toggle switch ───────────────────────────── */
 .app-setting-row {
