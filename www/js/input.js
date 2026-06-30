@@ -1,4 +1,12 @@
 /**
+ * How far (in screen px) the paddle sits ABOVE the fingertip, so the finger
+ * doesn't cover it. Applied in physical-screen space (before the player-2
+ * rotation), so each player sees the paddle lifted toward the field on their
+ * own device regardless of view orientation.
+ */
+const PADDLE_FINGER_OFFSET = 12;
+
+/**
  * InputHandler — translates pointer/touch events on the canvas into
  * normalised (0-1) paddle positions and calls `onMove(relX, relY)`.
  * Completely decoupled from the network layer via the callback.
@@ -79,7 +87,9 @@ export class InputHandler {
     }
 
     let mx = clientX - rect.left;
-    let my = clientY - rect.top;
+    // Lift the paddle slightly above the fingertip (physical-screen space) so the
+    // finger doesn't obscure it — feels better than the paddle sitting under it.
+    let my = clientY - rect.top - PADDLE_FINGER_OFFSET;
 
     // Player 2's view is rotated 180° — invert the pointer to game-space
     if (s.playerNumber === 2) {

@@ -533,35 +533,7 @@ export class UI {
       });
     };
 
-    // Sub-items
-    POWERS.forEach((p, i) => {
-      const item = document.createElement('button');
-      item.className = 'pu-item';
-      item.dataset.id = p.id;
-      item.style.color = p.color;
-      item.style.borderColor = `rgba(${_hexToRgb(p.color)},0.4)`;
-      item.innerHTML = p.svg + `<span class="pu-label">${p.label}</span>`;
-
-      // Position: start at center, animate to fan position
-      item.style.bottom  = `${4 - FAN[i].y}px`;  // negative y = up
-      item.style.left    = `${4 + FAN[i].x}px`;  // positive x = right
-      item.style.transitionDelay = `${i * 40}ms`;
-
-      bindActivate(item, () => {
-        _closeMenu();
-        // Remove this power-up from DOM — one-time use
-        item.classList.remove('visible');
-        setTimeout(() => item.remove(), 300); // wait for fade-out transition
-        onSelect?.(p.id);
-        // Brief glow feedback on the main button
-        mainBtn.style.boxShadow = `0 0 32px ${p.shadow}, 0 4px 20px rgba(0,0,0,0.6)`;
-        setTimeout(() => { mainBtn.style.boxShadow = ''; }, 600);
-      });
-
-      container.appendChild(item);
-    });
-
-    // Main FAB — the ⚡ toggle
+    // Main FAB — the ⚡ toggle (created before items so item handlers can close it)
     const mainBtn = document.createElement('button');
     mainBtn.className = 'pu-main';
     mainBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`;
@@ -569,6 +541,40 @@ export class UI {
 
     let open = false;
     const items = () => container.querySelectorAll('.pu-item');
+
+    // (Re)builds all power sub-items. Each power is one-time-use within a game
+    // (its button is removed when activated), so this must run at the start of
+    // every new game to restore the full set. See `reset` in the returned API.
+    const _buildItems = () => {
+      container.querySelectorAll('.pu-item').forEach(el => el.remove());
+      POWERS.forEach((p, i) => {
+        const item = document.createElement('button');
+        item.className = 'pu-item';
+        item.dataset.id = p.id;
+        item.style.color = p.color;
+        item.style.borderColor = `rgba(${_hexToRgb(p.color)},0.4)`;
+        item.innerHTML = p.svg + `<span class="pu-label">${p.label}</span>`;
+
+        // Position: start at center, animate to fan position
+        item.style.bottom  = `${4 - FAN[i].y}px`;  // negative y = up
+        item.style.left    = `${4 + FAN[i].x}px`;  // positive x = right
+        item.style.transitionDelay = `${i * 40}ms`;
+
+        bindActivate(item, () => {
+          _closeMenu();
+          // Remove this power-up from DOM — one-time use (restored on reset())
+          item.classList.remove('visible');
+          setTimeout(() => item.remove(), 300); // wait for fade-out transition
+          onSelect?.(p.id);
+          // Brief glow feedback on the main button
+          mainBtn.style.boxShadow = `0 0 32px ${p.shadow}, 0 4px 20px rgba(0,0,0,0.6)`;
+          setTimeout(() => { mainBtn.style.boxShadow = ''; }, 600);
+        });
+
+        // Insert before mainBtn so the toggle stays the last child (top z-order)
+        container.insertBefore(item, mainBtn);
+      });
+    };
 
     const _openMenu = () => {
       open = true;
@@ -592,11 +598,13 @@ export class UI {
     document.addEventListener('touchstart', _closeMenu, { passive: true });
 
     container.appendChild(mainBtn);
+    _buildItems();
     document.body.appendChild(container);
 
     return {
       show:    () => { container.style.display = 'flex'; },
       hide:    () => { _closeMenu(); container.style.display = 'none'; },
+      reset:   () => { _closeMenu(); _buildItems(); }, // restore all powers for a new game
       destroy: () => { _closeMenu(); container.remove(); style.remove();
                        document.removeEventListener('click', _closeMenu);
                        document.removeEventListener('touchstart', _closeMenu); },

@@ -338,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderer.initPositions();
     state.gameStarted = false;
     input.detach();
+    powerUp.reset();   // restore all one-time-use powers for the fresh game
     renderer.startLoop();
 
     ui.showStartCountdown(() => {
