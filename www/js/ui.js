@@ -252,18 +252,19 @@ export class UI {
       },
     ];
 
-    // Fan target positions relative to the main button (opens up-left arc)
+    // Fan target positions relative to the main button (opens up-right arc,
+    // since the FAB now sits in the bottom-left corner)
     const FAN = [
-      { x: 0,    y: -96 },   // straight up
-      { x: -68,  y: -68 },   // diagonal
-      { x: -96,  y: 0   },   // straight left
+      { x: 0,   y: -96 },   // straight up
+      { x: 68,  y: -68 },   // diagonal
+      { x: 96,  y: 0   },   // straight right
     ];
 
     // Inject keyframes + base styles once
     const style = document.createElement('style');
     style.id = 'powerupStyle';
     style.textContent = `
-      #powerupFab { position:fixed; bottom:24px; right:24px; width:58px; height:58px;
+      #powerupFab { position:fixed; bottom:24px; left:24px; width:58px; height:58px;
         display:none; align-items:center; justify-content:center; z-index:1200; }
       .pu-main {
         width:58px; height:58px; border-radius:50%; border:none; cursor:pointer;
@@ -283,7 +284,7 @@ export class UI {
         box-shadow: 0 0 28px rgba(34,211,238,0.6), 0 4px 20px rgba(0,0,0,0.6);
       }
       .pu-item {
-        position: absolute; bottom: 0; right: 0;
+        position: absolute; bottom: 0; left: 0;
         width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer;
         background: rgba(15,15,30,0.9);
         backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -326,7 +327,7 @@ export class UI {
 
       // Position: start at center, animate to fan position
       item.style.bottom  = `${4 - FAN[i].y}px`;  // negative y = up
-      item.style.right   = `${4 - FAN[i].x}px`;  // negative x = left
+      item.style.left    = `${4 + FAN[i].x}px`;  // positive x = right
       item.style.transitionDelay = `${i * 40}ms`;
 
       // stopPropagation on both click AND touchstart so document listeners don't fire

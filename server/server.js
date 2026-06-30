@@ -30,7 +30,7 @@ app.use(express.static(path.join(__dirname, '..')));
 const TICK_HZ = 60;
 const FIELD_W = 900;          // virtual field width  (9:16 to match client canvas)
 const FIELD_H = 1600;         // virtual field height
-const PADDLE_R = FIELD_W * 0.1;
+const PADDLE_R = FIELD_W * 0.115;
 const PUCK_R = PADDLE_R * 0.5;
 const FRICTION = 0.992;       // per-tick friction
 const MAX_PUCK_SPEED = 28;    // virtual px / tick
@@ -128,37 +128,57 @@ function resolvePaddle(puck, paddle, paddleR = PADDLE_R) {
     const minDist = PUCK_R + paddleR;
     if (dist >= minDist) return false;
 
-    // Contact normal. If the paddle is exactly centered on the puck (dist 0),
-    // fall back to the paddle's travel direction, else push the puck away from
-    // the paddle's own side so it always gets launched.
-    let angle;
+    // Contact normal (unit vector paddle→puck). Degenerate case (paddle exactly
+    // on the puck): use the paddle's travel direction, else push toward field center.
+    let nx, ny;
     if (dist > 0.0001) {
-        angle = Math.atan2(dy, dx);
+        nx = dx / dist; ny = dy / dist;
     } else {
-        const pvx = paddle.x - paddle.lastX;
-        const pvy = paddle.y - paddle.lastY;
-        angle = (Math.abs(pvx) + Math.abs(pvy) > 0.01)
-            ? Math.atan2(pvy, pvx)
-            : Math.atan2(FIELD_H / 2 - paddle.y, 0.0001); // toward field center
+        const tvx = paddle.x - paddle.lastX;
+        const tvy = paddle.y - paddle.lastY;
+        const tm = Math.hypot(tvx, tvy);
+        if (tm > 0.01) { nx = tvx / tm; ny = tvy / tm; }
+        else { nx = 0; ny = paddle.y < FIELD_H / 2 ? 1 : -1; }
     }
+
     // Always push the puck to the paddle edge so it can't get stuck inside
-    puck.x = paddle.x + Math.cos(angle) * minDist;
-    puck.y = paddle.y + Math.sin(angle) * minDist;
+    puck.x = paddle.x + nx * minDist;
+    puck.y = paddle.y + ny * minDist;
 
     if (paddle.wasContact) return true; // already touching — no new impulse
 
+    // Paddle velocity (px/tick) derived from its movement this tick
     const pvx = paddle.x - paddle.lastX;
     const pvy = paddle.y - paddle.lastY;
-    const paddleSpeed = Math.hypot(pvx, pvy);
-    const impactForce = Math.min(Math.max(paddleSpeed / 5, 0.6), 2.2);
-    const currentSpeed = Math.hypot(puck.vx, puck.vy);
-    let newSpeed = Math.max(currentSpeed, 11) * impactForce + paddleSpeed * 1.4;
-    newSpeed = Math.min(newSpeed, MAX_PUCK_SPEED);
 
-    const jitter = (Math.random() - 0.5) * 0.18;
-    const a = angle + jitter;
-    puck.vx = Math.cos(a) * newSpeed;
-    puck.vy = Math.sin(a) * newSpeed;
+    // Relative velocity of puck w.r.t. paddle, projected onto the contact normal.
+    // Only bounce when the puck is actually approaching the paddle (vn < 0).
+    const vn = (puck.vx - pvx) * nx + (puck.vy - pvy) * ny;
+
+    if (vn < 0) {
+        // Rigid-body reflection against an (effectively) infinite-mass paddle:
+        //   v' = v - (1+e)·vn·n
+        // This automatically carries the paddle's motion into the puck — swipe the
+        // paddle sideways and the puck follows that direction (intuitive aiming).
+        const e = 1.05; // restitution: slightly springy for a lively feel
+        puck.vx = puck.vx - (1 + e) * vn * nx;
+        puck.vy = puck.vy - (1 + e) * vn * ny;
+    } else {
+        // Puck moving away but paddle caught up to it — nudge it along the paddle's push
+        puck.vx += pvx;
+        puck.vy += pvy;
+    }
+
+    // Speed limits: keep a modest floor so soft taps still nudge the puck (precise
+    // dinks possible), but no longer force a hard launch on every contact.
+    let sp = Math.hypot(puck.vx, puck.vy);
+    const MIN_HIT = 6;
+    if (sp < MIN_HIT) {
+        if (sp < 0.001) { puck.vx = nx * MIN_HIT; puck.vy = ny * MIN_HIT; }
+        else { const s = MIN_HIT / sp; puck.vx *= s; puck.vy *= s; }
+        sp = MIN_HIT;
+    }
+    if (sp > MAX_PUCK_SPEED) { const s = MAX_PUCK_SPEED / sp; puck.vx *= s; puck.vy *= s; }
     return true;
 }
 

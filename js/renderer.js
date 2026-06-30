@@ -51,7 +51,7 @@ export class Renderer {
       this.canvas.width  = mh * aspectRatio;
     }
 
-    s.PADDLE_RADIUS = this.canvas.width * 0.1;
+    s.PADDLE_RADIUS = this.canvas.width * 0.115;
     s.PUCK_RADIUS   = s.PADDLE_RADIUS * 0.5;
   }
 
