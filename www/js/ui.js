@@ -316,6 +316,27 @@ export class UI {
     const container = document.createElement('div');
     container.id = 'powerupFab';
 
+    // Fire `handler` on tap. Uses touchend (not click) so it registers reliably
+    // under multi-touch — i.e. tapping a power while the other finger holds the
+    // paddle. preventDefault on touchend suppresses the ghost click; a dedupe
+    // guard keeps the desktop click path from double-firing.
+    const bindActivate = (el, handler) => {
+      let handledByTouch = false;
+      el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+      el.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handledByTouch = true;
+        handler();
+        setTimeout(() => { handledByTouch = false; }, 500);
+      }, { passive: false });
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (handledByTouch) return;
+        handler();
+      });
+    };
+
     // Sub-items
     POWERS.forEach((p, i) => {
       const item = document.createElement('button');
@@ -330,11 +351,7 @@ export class UI {
       item.style.left    = `${4 + FAN[i].x}px`;  // positive x = right
       item.style.transitionDelay = `${i * 40}ms`;
 
-      // stopPropagation on both click AND touchstart so document listeners don't fire
-      const _stopProp = (e) => e.stopPropagation();
-      item.addEventListener('touchstart', _stopProp, { passive: false });
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
+      bindActivate(item, () => {
         _closeMenu();
         // Remove this power-up from DOM — one-time use
         item.classList.remove('visible');
@@ -370,13 +387,9 @@ export class UI {
       items().forEach(el => el.classList.remove('visible'));
     };
 
-    // stopPropagation on touchstart so the document touchstart listener doesn't
-    // fire and immediately close the menu right after the main button opens it.
-    mainBtn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
-    mainBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      open ? _closeMenu() : _openMenu();
-    });
+    // touchend-based activation (see bindActivate) so the toggle works under
+    // multi-touch and the document close-listener isn't tripped by its own tap.
+    bindActivate(mainBtn, () => { open ? _closeMenu() : _openMenu(); });
 
     // Tap anywhere else closes the menu
     document.addEventListener('click', _closeMenu);

@@ -15,7 +15,13 @@ export class InputHandler {
     this.onMove  = onMove;
 
     this._handleMove         = this._handleMove.bind(this);
-    this._preventDefaultTouch = (e) => e.preventDefault();
+    // Block default touch behaviour (scroll / rubber-band) during play, BUT let
+    // touches on the power-up FAB through so it can be tapped while the other
+    // finger is still controlling the paddle (multi-touch).
+    this._preventDefaultTouch = (e) => {
+      if (e.target.closest && e.target.closest('#powerupFab')) return;
+      e.preventDefault();
+    };
   }
 
   attach() {
