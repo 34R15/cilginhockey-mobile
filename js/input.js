@@ -4,7 +4,7 @@
  * rotation), so each player sees the paddle lifted toward the field on their
  * own device regardless of view orientation.
  */
-const PADDLE_FINGER_OFFSET = 12;
+const PADDLE_FINGER_OFFSET = 24;
 
 /**
  * InputHandler — translates pointer/touch events on the canvas into
