@@ -3,6 +3,8 @@
  * Handles iOS AudioContext unlock via the first canvas interaction.
  * Has no dependency on state or network.
  */
+import { settings } from './settings.js';
+
 export class SoundManager {
   constructor() {
     this._goal = null;
@@ -67,7 +69,7 @@ export class SoundManager {
    */
   playPower() {
     const ctx = this._ctx;
-    if (!ctx) return;
+    if (!ctx || !settings.soundEnabled) return;
     // Resume context if suspended (iOS requires user-gesture unlock)
     const run = () => {
       const now = ctx.currentTime;
@@ -109,7 +111,7 @@ export class SoundManager {
   }
 
   async _play(sound) {
-    if (!sound || !this._loaded) return;
+    if (!sound || !this._loaded || !settings.soundEnabled) return;
     try {
       sound.currentTime = 0;
       await sound.play();

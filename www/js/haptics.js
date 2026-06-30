@@ -7,6 +7,8 @@
  * NotificationType values: 'Success' | 'Warning' | 'Error'
  */
 
+import { settings } from './settings.js';
+
 function _plugin() {
   return window.Capacitor?.Plugins?.Haptics ?? null;
 }
@@ -14,11 +16,13 @@ function _plugin() {
 export const haptic = {
   /** Short physical tap. style: 'Heavy' | 'Medium' | 'Light' */
   async impact(style = 'Medium') {
+    if (!settings.vibrationEnabled) return;
     try { await _plugin()?.impact({ style }); } catch {}
   },
 
   /** Pattern feedback. type: 'Success' | 'Warning' | 'Error' */
   async notification(type = 'Success') {
+    if (!settings.vibrationEnabled) return;
     try { await _plugin()?.notification({ type }); } catch {}
   },
 };

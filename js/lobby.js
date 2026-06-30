@@ -1,3 +1,5 @@
+import { settings } from './settings.js';
+
 /**
  * LobbyManager — owns all pre-game UI: name form, main menu,
  * waiting room, and settings popup.
@@ -37,8 +39,11 @@ export class LobbyManager {
       const code = document.getElementById('currentRoomId')?.textContent;
       if (code) this.cb.onShareCode?.(code);
     });
+    this._bind('settingsBtn',        'click', () => this._openAppSettings());
+    this._bind('closeAppSettings',   'click', () => this._closeAppSettings());
 
     this._initSegments();
+    this._initAppSettingsToggles();
   }
 
   // ─── Public navigation helpers ─────────────────────────────────────────────
@@ -161,6 +166,30 @@ export class LobbyManager {
     document.body.style.overflow = 'hidden';
 
     this.cb.onBackToName?.();
+  }
+
+  // ─── App settings popup ────────────────────────────────────────────────────
+
+  _initAppSettingsToggles() {
+    const soundEl = this._el('soundToggle');
+    const vibEl   = this._el('vibrationToggle');
+    if (soundEl) soundEl.checked = settings.soundEnabled;
+    if (vibEl)   vibEl.checked   = settings.vibrationEnabled;
+
+    soundEl?.addEventListener('change', () => { settings.soundEnabled = soundEl.checked; });
+    vibEl?.addEventListener('change',   () => { settings.vibrationEnabled = vibEl.checked; });
+  }
+
+  _openAppSettings() {
+    const popup = this._el('appSettingsPopup');
+    if (popup) popup.style.display = 'flex';
+    this._el('settingsBtn')?.classList.add('spinning');
+  }
+
+  _closeAppSettings() {
+    const popup = this._el('appSettingsPopup');
+    if (popup) popup.style.display = 'none';
+    this._el('settingsBtn')?.classList.remove('spinning');
   }
 
   // ─── Utilities ─────────────────────────────────────────────────────────────

@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 
     const msg = winner === state.playerNumber ? 'Kazandınız!' : 'Kaybettiniz!';
-    ui.showGameOver(msg, () => _resetToMenu());
+    ui.showGameOver(msg, state.score, state.playerNumber, () => _resetToMenu());
   }
 
   function _resetToMenu() {

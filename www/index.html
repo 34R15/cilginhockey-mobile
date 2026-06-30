@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="css/onboarding.css">
 </head>
 <body>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/main.js"></script>
 
     <div id="nameForm">
@@ -35,6 +35,13 @@
 
     <div id="menu" style="display: none;">
         <div id="mainMenu">
+            <button id="settingsBtn" class="settings-fab" aria-label="Ayarlar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
             <div class="brand">ÇILGIN HOKEY</div>
             <button id="quickPlayBtn" class="btn btn-cta">
                 <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Hızlı Oyna
@@ -93,6 +100,34 @@
                 </div>
             </div>
             <button id="confirmScoreLimit" class="btn btn-cta">Oyunu Başlat</button>
+        </div>
+    </div>
+
+    <!-- App Settings Popup -->
+    <div id="appSettingsPopup" class="popup" style="display:none;">
+        <div class="popup-content">
+            <h2>Ayarlar</h2>
+            <div class="app-setting-row">
+                <div class="app-setting-info">
+                    <span class="app-setting-label">Ses Efektleri</span>
+                    <span class="app-setting-desc">Vuruş ve gol sesleri</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="soundToggle" checked>
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+            </div>
+            <div class="app-setting-row">
+                <div class="app-setting-info">
+                    <span class="app-setting-label">Titreşim</span>
+                    <span class="app-setting-desc">Dokunsal geri bildirim</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="vibrationToggle" checked>
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+            </div>
+            <button id="closeAppSettings" class="btn btn-ghost" style="margin-top:8px;">Kapat</button>
         </div>
     </div>
 

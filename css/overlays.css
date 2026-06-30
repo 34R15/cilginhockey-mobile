@@ -1,4 +1,97 @@
-/* Full-screen game overlays: start countdown, toast, goal animation */
+/* Full-screen game overlays: game-over, start countdown, toast, goal animation */
+
+/* ── Game-over dialog ─────────────────────────────────────────────── */
+#gameOverDialog {
+    position: fixed; inset: 0; z-index: 2500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; box-sizing: border-box;
+    animation: fadeIn 0.3s ease both;
+}
+#gameOverDialog.go-exit { animation: fadeOut 0.28s ease both; }
+
+.go-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(8,8,22,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.go-card {
+    position: relative;
+    width: 100%; max-width: 320px;
+    padding: 36px 28px 32px;
+    border-radius: 30px;
+    text-align: center;
+    background: var(--glass);
+    border: 1px solid var(--stroke);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.10);
+    animation: cardRise 0.45s var(--ease-out) both;
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+}
+
+.go-icon {
+    width: 88px; height: 88px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+}
+.go-icon--win {
+    background: radial-gradient(circle at 40% 35%, rgba(251,191,36,0.22), rgba(245,158,11,0.08));
+    border: 1.5px solid rgba(251,191,36,0.35);
+    color: #fbbf24;
+    box-shadow: 0 0 32px rgba(251,191,36,0.3);
+}
+.go-icon--lose {
+    background: radial-gradient(circle at 40% 35%, rgba(244,63,94,0.18), rgba(124,58,237,0.08));
+    border: 1.5px solid rgba(244,63,94,0.3);
+    color: #f43f5e;
+    box-shadow: 0 0 32px rgba(244,63,94,0.25);
+}
+
+.go-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 26px; letter-spacing: 0.5px;
+    margin: 0 0 20px;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.go-title--win {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    filter: drop-shadow(0 0 18px rgba(251,191,36,0.5));
+}
+.go-title--lose {
+    background: linear-gradient(90deg, var(--neon-rose), var(--neon-purple));
+    filter: drop-shadow(0 0 18px rgba(244,63,94,0.4));
+}
+
+.go-score {
+    display: flex; align-items: center; gap: 18px;
+    margin-bottom: 28px;
+    padding: 14px 28px;
+    border-radius: 18px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid var(--stroke-soft);
+}
+.go-score-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.go-score-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 38px; font-weight: 900; line-height: 1;
+    color: #eef1f8;
+}
+.go-score-lbl {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted);
+}
+.go-score-sep {
+    font-size: 26px; font-weight: 300; color: var(--stroke);
+    line-height: 1;
+}
+.go-score--me   .go-score-num { color: var(--neon-cyan); }
+.go-score--opp  .go-score-num { color: #94a3b8; }
+
+.go-btn { width: 100%; }
+/* ─────────────────────────────────────────────────────────────────── */
 
 #startCountdown {
     position: fixed;

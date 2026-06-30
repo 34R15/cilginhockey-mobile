@@ -110,47 +110,60 @@ export class UI {
 
   // ─── 3. Game-over dialog ───────────────────────────────────────────────────
 
-  showGameOver(message, onNewGame) {
-    // Remove any existing dialog first
+  /**
+   * @param {string}   message   - 'Kazandınız!' | 'Kaybettiniz!'
+   * @param {{player1:number, player2:number}} score
+   * @param {number}   playerNumber - 1 or 2 (to label score sides)
+   * @param {function} onNewGame
+   */
+  showGameOver(message, score, playerNumber, onNewGame) {
     const existing = document.getElementById('gameOverDialog');
     if (existing) existing.remove();
 
+    const isWin = message.includes('Kazand');
+    const p1    = score?.player1 ?? 0;
+    const p2    = score?.player2 ?? 0;
+    const myScore  = playerNumber === 2 ? p2 : p1;
+    const oppScore = playerNumber === 2 ? p1 : p2;
+
+    const winIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="52" height="52">
+      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+    </svg>`;
+    const loseIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" width="52" height="52">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M16 16s-1.5-2-4-2-4 2-4 2"/>
+      <line x1="9" y1="9" x2="9.01" y2="9"/>
+      <line x1="15" y1="9" x2="15.01" y2="9"/>
+    </svg>`;
+
     const wrap = document.createElement('div');
     wrap.id = 'gameOverDialog';
-    wrap.style.cssText =
-      'position:fixed;top:0;left:0;width:100%;height:100%;' +
-      'background:rgba(0,0,0,0.85);display:flex;align-items:center;' +
-      'justify-content:center;z-index:2000;';
+    wrap.innerHTML = `
+      <div class="go-backdrop"></div>
+      <div class="go-card">
+        <div class="go-icon ${isWin ? 'go-icon--win' : 'go-icon--lose'}">${isWin ? winIcon : loseIcon}</div>
+        <h2 class="go-title ${isWin ? 'go-title--win' : 'go-title--lose'}">${message}</h2>
+        <div class="go-score">
+          <div class="go-score-block go-score--me">
+            <span class="go-score-num">${myScore}</span>
+            <span class="go-score-lbl">Sen</span>
+          </div>
+          <div class="go-score-sep">–</div>
+          <div class="go-score-block go-score--opp">
+            <span class="go-score-num">${oppScore}</span>
+            <span class="go-score-lbl">Rakip</span>
+          </div>
+        </div>
+        <button class="btn btn-cta go-btn" id="goNewGameBtn">Yeni Oyun</button>
+      </div>
+    `;
 
-    const card = document.createElement('div');
-    card.style.cssText =
-      'background:rgba(0,0,0,0.95);padding:32px 20px 28px;border-radius:18px;' +
-      'text-align:center;width:90vw;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.25);';
-
-    const title = document.createElement('h2');
-    title.textContent = message;
-    title.style.cssText =
-      "color:#fff;font-size:24px;margin:0 0 20px;font-family:'Montserrat','Arial',sans-serif;";
-
-    const btn = document.createElement('button');
-    btn.textContent = 'Yeni Oyun';
-    btn.style.cssText =
-      'padding:18px 0;width:100%;font-size:22px;border-radius:12px;border:none;' +
-      'background:linear-gradient(90deg,#43e97b 0%,#38f9d7 100%);color:#fff;' +
-      'cursor:pointer;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.12);' +
-      'transition:background 0.2s,box-shadow 0.2s;';
-    btn.addEventListener('mousedown', () => {
-      btn.style.background = 'linear-gradient(90deg,#11998e 0%,#38ef7d 100%)';
-    });
-    btn.addEventListener('click', () => {
-      wrap.remove();
-      if (onNewGame) onNewGame();
-    });
-
-    card.appendChild(title);
-    card.appendChild(btn);
-    wrap.appendChild(card);
     document.body.appendChild(wrap);
+    wrap.querySelector('#goNewGameBtn').addEventListener('click', () => {
+      wrap.classList.add('go-exit');
+      setTimeout(() => { wrap.remove(); if (onNewGame) onNewGame(); }, 280);
+    });
   }
 
   removeGameOver() {
