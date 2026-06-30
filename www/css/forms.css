@@ -22,10 +22,10 @@
 }
 
 /* Segmented pill controls */
-.setting-group { margin-bottom: 18px; text-align: left; }
+.setting-group { margin-bottom: 20px; text-align: left; }
 .setting-group > .seg-label {
-    display: block; margin-bottom: 9px;
-    color: var(--text-muted); font-size: 12px; font-weight: 700;
+    display: block; margin-bottom: 10px;
+    color: var(--text-muted); font-size: 13px; font-weight: 700;
     letter-spacing: 1.5px; text-transform: uppercase;
 }
 .segment {
@@ -40,14 +40,14 @@
 .seg-option {
     flex: 1 1 0;
     min-width: 0;
-    padding: 13px 6px;
+    padding: 15px 6px;
     border: none;
     border-radius: 12px;
     background: transparent;
     color: var(--text-muted);
     font-family: 'Montserrat', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
     transition: color 0.2s, transform 0.12s var(--ease-spring), box-shadow 0.25s;
@@ -60,6 +60,6 @@
     box-shadow: 0 6px 18px rgba(124,58,237,0.45);
 }
 .seg-option .seg-sub {
-    display: block; font-size: 10.5px; font-weight: 500;
-    opacity: 0.7; margin-top: 2px; letter-spacing: 0.2px;
+    display: block; font-size: 13px; font-weight: 500;
+    opacity: 0.75; margin-top: 3px; letter-spacing: 0.2px;
 }

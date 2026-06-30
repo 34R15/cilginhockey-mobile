@@ -350,15 +350,14 @@ function scoreGoal(room, scorer) {
     io.to(room.id).emit('goal', { scorer, score: p.score });
 
     const s1 = p.score.player1, s2 = p.score.player2;
-    const inOT = s1 >= room.scoreLimit && s2 >= room.scoreLimit;
-    // Overtime (deuce): both reached scoreLimit — need 2-goal lead to win
-    const winnerOT = inOT && Math.abs(s1 - s2) >= 2 ? (s1 > s2 ? 1 : 2) : null;
-    // Normal win: one player reached scoreLimit and other hasn't (or gap already 2+)
-    const winnerNormal = (!inOT && (s1 >= room.scoreLimit || s2 >= room.scoreLimit)) ? (s1 > s2 ? 1 : 2) : null;
+    // Overtime (deuce): both players have reached scoreLimit-1 (e.g. 4-4 in a 5-point match)
+    const inOT = s1 >= room.scoreLimit - 1 && s2 >= room.scoreLimit - 1;
+    const winnerOT     = inOT  && Math.abs(s1 - s2) >= 2 ? (s1 > s2 ? 1 : 2) : null;
+    const winnerNormal = !inOT && (s1 >= room.scoreLimit || s2 >= room.scoreLimit) ? (s1 > s2 ? 1 : 2) : null;
     const winner = winnerOT ?? winnerNormal;
 
-    // Emit overtime start when both first reach scoreLimit (deuce moment)
-    if (inOT && !room.inOT) {
+    // Emit overtime start at the deuce moment (first time both reach scoreLimit-1 tied)
+    if (inOT && s1 === s2 && !room.inOT) {
         room.inOT = true;
         io.to(room.id).emit('overtime', { score: p.score });
     }
