@@ -10,7 +10,7 @@ const STORAGE_KEY = 'ch-onboarding-seen-v1';
 const SLIDES = [
   {
     accent: 'rose',
-    image: 'assets/images/cilginhokey.png',
+    image: 'assets/icon-only.png',
     title: 'ÇILGIN HOKEY',
     desc: 'Hızlı, neon ve çılgın hava hokeyine hoş geldin. Hadi başlayalım!',
     // ⚡
