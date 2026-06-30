@@ -13,6 +13,7 @@ export class InputHandler {
     this.canvas  = canvas;
     this.state   = state;
     this.onMove  = onMove;
+    this._rect   = null; // cached canvas bounds — refreshed on gesture start
 
     this._handleMove         = this._handleMove.bind(this);
     // Block default touch behaviour (scroll / rubber-band) during play, BUT let
@@ -26,6 +27,7 @@ export class InputHandler {
 
   attach() {
     const c = this.canvas;
+    this._rect = c.getBoundingClientRect();
     c.addEventListener('mousemove',  this._handleMove);
     c.addEventListener('touchmove',  this._handleMove, { passive: false });
     c.addEventListener('touchstart', this._handleMove, { passive: false });
@@ -48,7 +50,12 @@ export class InputHandler {
     }
     e.preventDefault();
 
-    const rect = this.canvas.getBoundingClientRect();
+    // Refresh cached bounds only at gesture start (touchstart), not on every move —
+    // getBoundingClientRect forces a layout flush and causes jank at touch frequency.
+    if (e.type === 'touchstart' || !this._rect) {
+      this._rect = this.canvas.getBoundingClientRect();
+    }
+    const rect = this._rect;
     let clientX, clientY;
 
     if (e.type.startsWith('touch')) {
