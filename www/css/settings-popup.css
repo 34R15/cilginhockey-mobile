@@ -1,0 +1,43 @@
+/* ── Settings popup (Oyun Ayarları) ───────────────────────────────── */
+#scoreLimitPopup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: rgba(8, 8, 22, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: fadeIn 0.3s ease both;
+}
+
+.popup-content {
+    width: 100%;
+    max-width: 380px;
+    box-sizing: border-box;
+    padding: 28px 24px 24px;
+    border-radius: 28px;
+    text-align: center;
+    background: var(--glass);
+    border: 1px solid var(--stroke);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    box-shadow: 0 26px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.10);
+    animation: cardRiseFlat 0.45s var(--ease-out) both;
+}
+
+.popup-content h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    margin: 0 0 22px;
+    background: linear-gradient(90deg, var(--neon-violet), var(--neon-cyan));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.popup-content .btn-cta { margin-top: 8px; }

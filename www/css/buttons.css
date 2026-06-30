@@ -1,0 +1,53 @@
+/* ── Unified button system ────────────────────────────────────────── */
+.btn {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 17px 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--text);
+    border: 1px solid var(--stroke);
+    border-radius: 16px;
+    background: var(--glass-strong);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s var(--ease-spring), box-shadow 0.2s, border-color 0.2s, background 0.2s;
+    -webkit-user-select: none; user-select: none;
+}
+.btn:active { transform: scale(0.96); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Primary call-to-action — glowing gradient (Hızlı Oyna, settings confirm, name submit) */
+.btn-cta {
+    border: none;
+    color: #fff;
+    background: linear-gradient(135deg, var(--neon-rose) 0%, var(--neon-purple) 100%);
+    box-shadow: 0 10px 26px rgba(124,58,237,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+.btn-cta::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent 55%);
+    opacity: 0.6;
+}
+.btn-cta:active { box-shadow: 0 4px 14px rgba(124,58,237,0.4); }
+
+/* Accent variants — colored glass with a left neon edge */
+.btn-accent { border-color: var(--stroke); }
+.btn-purple { box-shadow: inset 4px 0 0 var(--neon-purple), 0 6px 18px rgba(0,0,0,0.3); }
+.btn-cyan   { box-shadow: inset 4px 0 0 var(--neon-cyan),   0 6px 18px rgba(0,0,0,0.3); }
+.btn-purple:active, .btn-cyan:active { background: rgba(255,255,255,0.16); }
+
+/* Ghost — subtle, for low-priority actions (Geri Dön) */
+.btn-ghost {
+    background: transparent;
+    border-color: var(--stroke-soft);
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.btn-ghost:active { background: rgba(255,255,255,0.06); }
+
+.btn-icon { margin-right: 9px; vertical-align: -3px; }

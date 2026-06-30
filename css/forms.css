@@ -1,0 +1,65 @@
+/* Text inputs and segmented (pill) controls */
+
+.field-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 18px 20px;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 16px;
+    border: 1px solid var(--stroke);
+    outline: none;
+    background: rgba(0,0,0,0.30);
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.field-input::placeholder { color: var(--text-muted); font-weight: 500; }
+.field-input:focus {
+    border-color: var(--neon-violet);
+    background: rgba(0,0,0,0.40);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.30), 0 0 22px rgba(124,58,237,0.25);
+}
+
+/* Segmented pill controls */
+.setting-group { margin-bottom: 18px; text-align: left; }
+.setting-group > .seg-label {
+    display: block; margin-bottom: 9px;
+    color: var(--text-muted); font-size: 12px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+}
+.segment {
+    display: flex;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid var(--stroke-soft);
+}
+.segment.wrap { flex-wrap: wrap; }
+.seg-option {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 13px 6px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.2s, transform 0.12s var(--ease-spring), box-shadow 0.25s;
+}
+.segment.wrap .seg-option { flex-basis: calc(50% - 3px); }
+.seg-option:active { transform: scale(0.94); }
+.seg-option.active {
+    color: #fff;
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-rose));
+    box-shadow: 0 6px 18px rgba(124,58,237,0.45);
+}
+.seg-option .seg-sub {
+    display: block; font-size: 10.5px; font-weight: 500;
+    opacity: 0.7; margin-top: 2px; letter-spacing: 0.2px;
+}

@@ -1,0 +1,77 @@
+/* Waiting room (#waitingRoom): room code, copy/share, waiting status */
+
+#waitingRoom {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 14px;
+}
+.room-id-box {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(34, 211, 238, 0.5);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin: 4px 0;
+    font-size: 2.6rem;
+    font-family: 'Orbitron', monospace;
+    color: var(--neon-cyan);
+    letter-spacing: 6px;
+    font-weight: 700;
+    text-shadow: 0 0 18px rgba(34,211,238,0.6);
+    box-shadow: 0 0 30px rgba(34,211,238,0.18), inset 0 0 24px rgba(34,211,238,0.08);
+    user-select: all;
+    text-align: center;
+    animation: codePulse 2.4s ease-in-out infinite;
+}
+@keyframes codePulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(34,211,238,0.18), inset 0 0 24px rgba(34,211,238,0.08); }
+    50%      { box-shadow: 0 0 44px rgba(34,211,238,0.34), inset 0 0 30px rgba(34,211,238,0.14); }
+}
+.copy-row { display: flex; gap: 10px; }
+.copy-btn {
+    flex: 1;
+    background: var(--glass-strong);
+    color: var(--text);
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    padding: 13px 14px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    transition: transform 0.12s var(--ease-spring), background 0.2s, border-color 0.2s;
+}
+.copy-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.16); }
+.share-btn { box-shadow: inset 4px 0 0 #25d366; }
+.copy-btn.copy-code { box-shadow: inset 4px 0 0 var(--neon-cyan); }
+.waiting-dots::after {
+    content: '';
+    animation: dots 1.4s steps(4, end) infinite;
+}
+@keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+}
+.waiting-desc {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 4px 0 0;
+    text-align: center;
+    line-height: 1.5;
+}
+.waiting-title {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--text);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+.waiting-label {
+    color: var(--text-muted); font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; text-align: center;
+}

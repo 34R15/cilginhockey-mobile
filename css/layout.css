@@ -1,0 +1,30 @@
+/* Canvas, rotate prompt, and orientation handling */
+
+canvas {
+    border: 2px solid #333;
+    background: #000;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#rotateMessage { display: none; }
+
+@media (orientation: landscape) {
+    #gameCanvas, #menu, #nameForm {
+        display: none !important;
+    }
+    #rotateMessage {
+        display: block !important;
+        font-size: 24px;
+        text-align: center;
+        margin-top: 50%;
+        color: white;
+    }
+}
+@media (orientation: portrait) {
+    #rotateMessage {
+        display: none !important;
+    }
+}

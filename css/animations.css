@@ -1,0 +1,20 @@
+/* Shared keyframes used across multiple components.
+   Component-specific keyframes (codePulse, goalPulse, countdownPop, dots…)
+   live alongside their own component CSS. */
+
+/* Centered cards that translate(-50%,-50%): rise while keeping the centering offset */
+@keyframes cardRise {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 26px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* Flat rise for cards that are NOT transform-centered (nameForm, popup-content) */
+@keyframes cardRiseFlat {
+    from { opacity: 0; transform: translateY(26px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}

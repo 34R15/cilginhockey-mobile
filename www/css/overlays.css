@@ -1,0 +1,103 @@
+/* Full-screen game overlays: start countdown, toast, goal animation */
+
+#startCountdown {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.78);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 6rem;
+    color: #39ff14;
+    font-family: 'Montserrat', 'Arial', sans-serif;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 4px 16px #000;
+    transition: opacity 0.35s;
+    opacity: 1;
+    pointer-events: none;
+    text-align: center;
+}
+@keyframes countdownPop {
+    0%   { transform: scale(2.8); opacity: 0; }
+    35%  { transform: scale(0.88); opacity: 1; }
+    65%  { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes countdownGo {
+    0%   { transform: scale(0.5); opacity: 0; letter-spacing: 16px; }
+    40%  { transform: scale(1.15); opacity: 1; letter-spacing: 6px; }
+    100% { transform: scale(1);    opacity: 1; letter-spacing: 4px; }
+}
+
+/* Toast Bildirimi Stilleri */
+.toast-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 16px 32px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toast-notification.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Gol Animasyonu Stilleri */
+.goal-animation {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 72px;
+    font-weight: bold;
+    text-shadow: 0 0 20px currentColor,
+                 0 0 40px currentColor;
+    z-index: 2000;
+    opacity: 0;
+    display: none;
+    font-family: 'Montserrat', 'Arial', sans-serif;
+    letter-spacing: 2px;
+    pointer-events: none;
+    text-align: center;
+    transition: none;
+}
+
+.goal-animation.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    animation: goalPulse 1.5s ease-in-out forwards;
+}
+
+@keyframes goalPulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}

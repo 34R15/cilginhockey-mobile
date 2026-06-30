@@ -1,0 +1,57 @@
+/* Name entry screen (#nameForm) with atmospheric hero image */
+
+#nameForm {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+/* Atmospheric hero image, darkened so the glass card pops */
+#nameForm::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(10,10,31,0.55) 0%, rgba(10,10,31,0.88) 100%),
+        url('assets/images/cilginhokey.png') center/cover no-repeat;
+    opacity: 0.9;
+    z-index: -1;
+}
+
+#nameForm .form-content {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 34px 26px 30px;
+    border-radius: 28px;
+    background: var(--glass);
+    border: 1px solid var(--stroke);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10);
+    /* nameForm card isn't centered via transform, so it uses a plain rise */
+    animation: cardRiseFlat 0.6s var(--ease-out) both;
+}
+
+#nameForm h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 30px;
+    letter-spacing: 1px;
+    margin: 0 0 4px;
+    text-align: center;
+    background: linear-gradient(90deg, var(--neon-violet), var(--neon-cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 18px rgba(124,58,237,0.45));
+}
