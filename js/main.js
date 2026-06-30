@@ -11,6 +11,7 @@ import { UI }           from './ui.js';
 import { LobbyManager } from './lobby.js';
 import { SocketManager } from './network.js';
 import { Onboarding }   from './onboarding.js';
+import { haptic } from './haptics.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -146,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data?.score) state.score = data.score;
       ui.showGoalAnimation();
       sound.playGoal();
+      haptic.notification('Success');
     },
 
     onHit(data) {
@@ -153,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.hitFlashTime   = Date.now();
       state.hitFlashPlayer = who;
       sound.playHit();
-      if (who === state.playerNumber && 'vibrate' in navigator) navigator.vibrate(40);
+      if (who === state.playerNumber) haptic.impact('Light');
     },
 
     onGameOver(data) {
@@ -187,6 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOwn  = data.player === state.playerNumber;
       const msg    = isOwn ? labels[data.power] : (data.power === 'freeze' ? '❄ Donduruldun!' : null);
       if (msg) _showPowerToast(msg);
+      // Sound + haptic for the activating player
+      if (isOwn) {
+        sound.playPower();
+        haptic.impact('Medium');
+      }
     },
 
     onServerRestarting() {

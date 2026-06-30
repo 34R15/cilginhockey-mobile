@@ -47,8 +47,8 @@ export class LobbyManager {
     this._el('nameForm')?.style     && (this._el('nameForm').style.display = 'none');
     this._el('waitingRoom')?.style  && (this._el('waitingRoom').style.display = 'none');
     this._el('scoreLimitPopup')?.style && (this._el('scoreLimitPopup').style.display = 'none');
-    this._el('mainMenu')?.style     && (this._el('mainMenu').style.display = 'block');
-    this._el('menu')?.style         && (this._el('menu').style.display = 'block');
+    this._el('mainMenu')?.style     && (this._el('mainMenu').style.display = 'flex');
+    this._el('menu')?.style         && (this._el('menu').style.display = 'flex');
   }
 
   showWaitingRoom(roomCode) {
@@ -110,7 +110,7 @@ export class LobbyManager {
     input.blur(); // dismiss keyboard — no auto-focus
 
     this._el('nameForm').style.display = 'none';
-    this._el('menu').style.display     = 'block';
+    this._el('menu').style.display     = 'flex';
 
     this.cb.onNameSubmit?.(name);
   }
@@ -147,7 +147,7 @@ export class LobbyManager {
       const el = this._el(id);
       if (el) el.style.display = 'none';
     });
-    this._el('mainMenu').style.display = 'block';
+    this._el('mainMenu').style.display = 'flex';
 
     const nameForm  = this._el('nameForm');
     const nameInput = this._el('playerNameInput');

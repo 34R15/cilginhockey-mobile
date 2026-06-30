@@ -7,6 +7,7 @@ export class SoundManager {
   constructor() {
     this._goal = null;
     this._hit  = null;
+    this._ctx  = null;   // Web Audio context for synthesised sfx
     this._loaded       = false;
     this._initialized  = false;
   }
@@ -36,6 +37,11 @@ export class SoundManager {
     this._goal.load();
     this._hit.load();
 
+    // Web Audio context (used for synthesised power-up sound)
+    try {
+      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch { /* ignore */ }
+
     // Silent test-play to unlock iOS audio pipeline
     Promise.all([
       this._goal.play().then(() => { this._goal.pause(); this._goal.currentTime = 0; }).catch(() => {}),
@@ -53,6 +59,53 @@ export class SoundManager {
 
   async playGoal() {
     await this._play(this._goal);
+  }
+
+  /**
+   * Synthesised power-up activation sound: short ascending whoosh.
+   * Uses Web Audio API — no extra asset file needed.
+   */
+  playPower() {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    // Resume context if suspended (iOS requires user-gesture unlock)
+    const run = () => {
+      const now = ctx.currentTime;
+
+      // Sweep oscillator: low → high pitch
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.38, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      // Subtle high-freq shimmer on top
+      const osc2  = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(1200, now + 0.06);
+      osc2.frequency.exponentialRampToValueAtTime(2400, now + 0.2);
+      gain2.gain.setValueAtTime(0.12, now + 0.06);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      osc.start(now);  osc.stop(now + 0.25);
+      osc2.start(now + 0.06); osc2.stop(now + 0.25);
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(run).catch(() => {});
+    } else {
+      run();
+    }
   }
 
   async _play(sound) {
