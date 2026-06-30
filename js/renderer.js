@@ -110,8 +110,7 @@ export class Renderer {
   draw() {
     const { canvas, ctx, state: s } = this;
 
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this._drawBackground();
 
     ctx.save();
     if (s.playerNumber === 2) {
@@ -120,6 +119,7 @@ export class Renderer {
     }
 
     this._drawField();
+    this._drawHudCorners();
     this._drawNames();
     this._drawScores();
     this._drawHitFlash();
@@ -131,25 +131,74 @@ export class Renderer {
     ctx.restore();
   }
 
+  _drawBackground() {
+    const { canvas, ctx } = this;
+    // Deep space gradient — subtle radial from dark navy center to pure black
+    const grad = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, canvas.height * 0.72
+    );
+    grad.addColorStop(0, '#080818');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Faint grid overlay — HUD style
+    ctx.save();
+    ctx.strokeStyle = 'rgba(34,211,238,0.045)';
+    ctx.lineWidth = 1;
+    const gridSize = canvas.width * 0.111; // ~9 columns
+    for (let x = 0; x <= canvas.width; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   _drawField() {
     const { canvas, ctx, state: s } = this;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
 
-    // Center dashed line
-    ctx.strokeStyle = '#fff';
-    ctx.setLineDash([5, 15]);
+    // ── Center line — neon cyan glow ─────────────────────────────────────────
+    ctx.save();
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur  = 10;
+    ctx.strokeStyle = 'rgba(34,211,238,0.55)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([8, 16]);
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height / 2);
-    ctx.lineTo(canvas.width, canvas.height / 2);
+    ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+    ctx.restore();
 
+    // ── Center circle — neon cyan ─────────────────────────────────────────────
+    const circleR = canvas.width * 0.16;
+    ctx.save();
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur  = 14;
+    ctx.strokeStyle = 'rgba(34,211,238,0.45)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Center dot
+    ctx.fillStyle = 'rgba(34,211,238,0.6)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // ── Goals ─────────────────────────────────────────────────────────────────
     const pw    = s.powers || {};
     const SMALL = 0.32;
     const thick = 5;
 
-    // Per-goal width: shrink OWN goal when smallGoal is active (defensive power).
-    // Player 1 is at bottom → p1SmallGoal shrinks the bottom goal.
-    // Player 2 is at top    → p2SmallGoal shrinks the top goal.
     const topRatio    = pw.p2SmallGoal ? SMALL : GOAL_WIDTH_RATIO;
     const bottomRatio = pw.p1SmallGoal ? SMALL : GOAL_WIDTH_RATIO;
 
@@ -161,43 +210,79 @@ export class Renderer {
     const topSmall    = pw.p2SmallGoal;
     const bottomSmall = pw.p1SmallGoal;
 
-    // Top goal
-    ctx.fillStyle = '#333';
+    // Top goal walls
+    ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, canvas.width, thick);
-    ctx.fillRect(0, 0, gsTop, 20);
-    ctx.fillRect(gsTop + gwTop, 0, canvas.width - gsTop - gwTop, 20);
+    ctx.fillRect(0, 0, gsTop, 22);
+    ctx.fillRect(gsTop + gwTop, 0, canvas.width - gsTop - gwTop, 22);
 
-    ctx.strokeStyle = topSmall ? '#f43f5e' : '#fff';
+    ctx.save();
+    ctx.shadowColor = topSmall ? '#f43f5e' : '#22d3ee';
+    ctx.shadowBlur  = 10;
+    ctx.strokeStyle = topSmall ? '#f43f5e' : '#22d3ee';
     ctx.lineWidth = thick;
     ctx.beginPath();
-    ctx.moveTo(gsTop, 0);            ctx.lineTo(gsTop, 20);
-    ctx.moveTo(gsTop + gwTop, 0);    ctx.lineTo(gsTop + gwTop, 20);
+    ctx.moveTo(gsTop, 0);         ctx.lineTo(gsTop, 22);
+    ctx.moveTo(gsTop + gwTop, 0); ctx.lineTo(gsTop + gwTop, 22);
     ctx.stroke();
+    ctx.restore();
 
-    // Bottom goal
-    ctx.fillStyle = '#333';
+    // Bottom goal walls
+    ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, canvas.height - thick, canvas.width, thick);
-    ctx.fillRect(0, canvas.height - 20, gsBot, 20);
-    ctx.fillRect(gsBot + gwBot, canvas.height - 20, canvas.width - gsBot - gwBot, 20);
+    ctx.fillRect(0, canvas.height - 22, gsBot, 22);
+    ctx.fillRect(gsBot + gwBot, canvas.height - 22, canvas.width - gsBot - gwBot, 22);
 
-    ctx.strokeStyle = bottomSmall ? '#f43f5e' : '#fff';
+    ctx.save();
+    ctx.shadowColor = bottomSmall ? '#f43f5e' : '#22d3ee';
+    ctx.shadowBlur  = 10;
+    ctx.strokeStyle = bottomSmall ? '#f43f5e' : '#22d3ee';
+    ctx.lineWidth = thick;
     ctx.beginPath();
-    ctx.moveTo(gsBot, canvas.height);         ctx.lineTo(gsBot, canvas.height - 20);
-    ctx.moveTo(gsBot + gwBot, canvas.height); ctx.lineTo(gsBot + gwBot, canvas.height - 20);
+    ctx.moveTo(gsBot, canvas.height);         ctx.lineTo(gsBot, canvas.height - 22);
+    ctx.moveTo(gsBot + gwBot, canvas.height); ctx.lineTo(gsBot + gwBot, canvas.height - 22);
     ctx.stroke();
+    ctx.restore();
 
-    // Semi-transparent goal area fills
-    ctx.fillStyle = topSmall    ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.1)';
-    ctx.fillRect(gsTop, 0, gwTop, 20);
-    ctx.fillStyle = bottomSmall ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.1)';
-    ctx.fillRect(gsBot, canvas.height - 20, gwBot, 20);
+    // Goal area fills
+    ctx.fillStyle = topSmall    ? 'rgba(244,63,94,0.14)'  : 'rgba(34,211,238,0.07)';
+    ctx.fillRect(gsTop, 0, gwTop, 22);
+    ctx.fillStyle = bottomSmall ? 'rgba(244,63,94,0.14)'  : 'rgba(34,211,238,0.07)';
+    ctx.fillRect(gsBot, canvas.height - 22, gwBot, 22);
+  }
+
+  _drawHudCorners() {
+    const { canvas, ctx } = this;
+    const arm = canvas.width * 0.065; // bracket arm length
+    const gap = 6;                    // inset from edge
+    const lw  = 2;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(34,211,238,0.35)';
+    ctx.lineWidth   = lw;
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur  = 8;
+    ctx.lineCap     = 'square';
+
+    const corners = [
+      [gap, gap,                         1,  1],   // top-left
+      [canvas.width - gap, gap,         -1,  1],   // top-right
+      [gap, canvas.height - gap,         1, -1],   // bottom-left
+      [canvas.width - gap, canvas.height - gap, -1, -1], // bottom-right
+    ];
+    for (const [x, y, sx, sy] of corners) {
+      ctx.beginPath();
+      ctx.moveTo(x + sx * arm, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * arm);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   _drawNames() {
     const { canvas, ctx, state: s } = this;
-    ctx.font = '20px Arial';
+    ctx.font = `700 ${Math.round(canvas.width * 0.052)}px 'Montserrat', Arial`;
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
 
     const isP2 = s.playerNumber === 2;
     const p2Text = isP2 ? s.playerName : s.opponentName;
@@ -230,20 +315,30 @@ export class Renderer {
 
   _drawScores() {
     const { canvas, ctx, state: s } = this;
-    ctx.font = 'bold 60px Arial';
     ctx.textAlign = 'center';
 
-    // Top half (opponent) — rotated so number reads right-side-up for viewer
+    const fontSize = Math.round(canvas.width * 0.175);
+    ctx.font = `900 ${fontSize}px 'Orbitron', Arial`;
+
+    // Top half (opponent) — rotated upright for their perspective
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 4);
     ctx.rotate(Math.PI);
-    ctx.fillStyle = 'rgba(244,67,54,0.2)';
+    ctx.shadowColor = '#f43f5e';
+    ctx.shadowBlur  = 28;
+    ctx.fillStyle = 'rgba(244,63,94,0.22)';
     ctx.fillText(s.score.player2.toString(), 0, 0);
+    ctx.shadowBlur = 0;
     ctx.restore();
 
-    // Bottom half (self)
-    ctx.fillStyle = 'rgba(76,175,80,0.2)';
+    // Bottom half (self) — green neon glow
+    ctx.save();
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur  = 28;
+    ctx.fillStyle = 'rgba(74,222,128,0.22)';
     ctx.fillText(s.score.player1.toString(), canvas.width / 2, canvas.height * 3 / 4);
+    ctx.shadowBlur = 0;
+    ctx.restore();
   }
 
   _drawHitFlash() {
@@ -274,18 +369,35 @@ export class Renderer {
     const r1 = (pw.p1Big ? 1.9 : 1) * s.PADDLE_RADIUS;
     const r2 = (pw.p2Big ? 1.9 : 1) * s.PADDLE_RADIUS;
 
-    this._drawOnePaddle(s.paddle1, this._paddle1Img, r1, isP2, pw.p1Frozen, '#818cf8');
-    this._drawOnePaddle(s.paddle2, this._paddle2Img, r2, isP2, pw.p2Frozen, '#818cf8');
+    this._drawOnePaddle(s.paddle1, this._paddle1Img, r1, isP2, pw.p1Frozen, '#818cf8', '#4ade80');
+    this._drawOnePaddle(s.paddle2, this._paddle2Img, r2, isP2, pw.p2Frozen, '#818cf8', '#f43f5e');
   }
 
-  _drawOnePaddle(pos, img, radius, rotated, frozen, freezeColor) {
+  _drawOnePaddle(pos, img, radius, rotated, frozen, freezeColor, glowColor) {
     const { ctx } = this;
     const size = radius * 2;
     ctx.save();
     ctx.translate(pos.x, pos.y);
     if (rotated) ctx.rotate(Math.PI);
+
+    // Neon glow halo behind paddle
+    if (glowColor) {
+      ctx.save();
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur  = 22;
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle   = glowColor;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.82, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
     ctx.drawImage(img, -radius, -radius, size, size);
-    // Freeze overlay: blue tint ring
+
+    // Freeze overlay
     if (frozen) {
       ctx.globalAlpha = 0.45;
       ctx.strokeStyle = freezeColor;
