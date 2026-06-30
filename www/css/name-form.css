@@ -2,13 +2,16 @@
 
 #nameForm {
     position: fixed;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 24px;
+    padding: max(24px, env(safe-area-inset-top))
+             max(20px, env(safe-area-inset-right))
+             max(24px, env(safe-area-inset-bottom))
+             max(20px, env(safe-area-inset-left));
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -27,6 +30,7 @@
 #nameForm .form-content {
     width: 100%;
     max-width: 380px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: stretch;

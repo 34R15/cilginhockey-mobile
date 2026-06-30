@@ -49,8 +49,27 @@ export class InputHandler {
     e.preventDefault();
 
     const rect = this.canvas.getBoundingClientRect();
-    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    let clientX, clientY;
+
+    if (e.type.startsWith('touch')) {
+      // Under multi-touch (e.g. one finger on FAB, one on canvas) touches[0]
+      // may belong to the FAB, not the canvas. Find the touch that actually
+      // lands inside the canvas rect so the paddle doesn't jump to the FAB.
+      let best = null;
+      for (let i = 0; i < e.touches.length; i++) {
+        const t = e.touches[i];
+        if (t.clientX >= rect.left && t.clientX <= rect.right &&
+            t.clientY >= rect.top  && t.clientY <= rect.bottom) {
+          best = t; break;
+        }
+      }
+      if (!best) return; // no touch on canvas — ignore
+      clientX = best.clientX;
+      clientY = best.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
 
     let mx = clientX - rect.left;
     let my = clientY - rect.top;

@@ -42,12 +42,18 @@
 
 .popup-content .btn-cta { margin-top: 8px; }
 
-/* ── Gear button in main menu ─────────────────────────────────────── */
-#menu { position: relative; }
+/* ── Menu header row (brand + gear) ──────────────────────────────── */
+.menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.menu-header .brand { margin: 0; flex: 1; text-align: left; }
 
 .settings-fab {
-    position: absolute;
-    top: 14px; right: 14px;
+    flex-shrink: 0;
     width: 38px; height: 38px;
     border-radius: 50%;
     border: 1px solid var(--stroke-soft);
