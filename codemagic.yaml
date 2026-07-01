@@ -30,7 +30,13 @@ workflows:
         script: |
           cd ios/App
           agvtool new-marketing-version 1.0
-          agvtool new-version -all "$BUILD_NUMBER"
+          # Derive the next build number from what App Store Connect already has,
+          # so every upload is strictly higher and never collides (the #1 cause of
+          # "build never finishes processing" / "did not find uploaded build").
+          LATEST=$(app-store-connect get-latest-testflight-build-number 6785493729 2>/dev/null || echo 0)
+          NEXT=$((LATEST + 1))
+          echo "Latest build on App Store Connect: $LATEST → using $NEXT"
+          agvtool new-version -all "$NEXT"
       - name: Install CocoaPods
         script: |
           if [ -f ios/App/Podfile ]; then
